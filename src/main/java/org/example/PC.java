@@ -42,7 +42,7 @@ public class PC {
                 String destinationMAC = scanner.nextLine();
 
                 String frame = message + "|" + name + "|" + destinationMAC;
-                out.println(frame);
+                out.println(frame + "|" + name);
             }
         } catch (IOException e) {
             e.printStackTrace();
