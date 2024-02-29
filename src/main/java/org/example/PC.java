@@ -8,6 +8,8 @@ import java.io.*;
 import java.net.*;
 import java.util.Scanner;
 
+import static org.example.JsonObject.readConfigFile;
+
 public class PC {
     private String name;
     private String ip;
@@ -87,15 +89,7 @@ public class PC {
         currentPC.start(sIp, serverPort);
     }
 
-    private static JsonObject readConfigFile(String filename) {
-        try (FileReader reader = new FileReader(filename)) {
-            JsonParser parser = new JsonParser();
-            return parser.parse(reader).getAsJsonObject();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+
 
     private String generateMacAddress() {
         String namePart = name.substring(0, Math.min(name.length(), 6));
@@ -115,37 +109,6 @@ public class PC {
         }
 
         return macBuilder.toString();
-    }
-}
-
-class PCReceiverThread extends Thread {
-    private Socket socket;
-    private String mac;
-
-    public PCReceiverThread(Socket socket, String mac) {
-        this.socket = socket;
-        this.mac = mac; // Add this line to set the mac attribute
-    }
-
-    public void run() {
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            while (true) {
-                String receivedFrame = in.readLine();
-                // Process the received frame and print the message if the destination MAC matches
-                // Extract source and destination MAC addresses
-                String[] frameData = receivedFrame.split("\\|");
-                String sourceMAC = frameData[1];
-                String destinationMAC = frameData[2];
-                String message = frameData[0];
-
-                if (destinationMAC.equals(mac)) {
-                    System.out.println("Received message from " + sourceMAC + ": " + message);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }
 

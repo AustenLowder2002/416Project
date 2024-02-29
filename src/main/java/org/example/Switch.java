@@ -2,12 +2,13 @@ package org.example;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.example.JsonObject.readConfigFile;
 
 public class Switch {
     private String name;
@@ -85,51 +86,5 @@ public class Switch {
         Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
         currentSwitch.start(switchPort);
     }
-
-    private static JsonObject readConfigFile(String filename) {
-        try (FileReader reader = new FileReader(filename)) {
-            JsonParser parser = new JsonParser();
-            return parser.parse(reader).getAsJsonObject();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
 }
 
-class SwitchThread extends Thread {
-    private Socket clientSocket;
-    private Switch parentSwitch;
-
-    public SwitchThread(Socket clientSocket, Switch parentSwitch) {
-        this.clientSocket = clientSocket;
-        this.parentSwitch = parentSwitch;
-    }
-
-    public void run() {
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            String neighborName = in.readLine();
-            parentSwitch.addNeighbor(neighborName, clientSocket);
-            System.out.println("Connected with neighbor: " + neighborName); // Print a message indicating successful connection
-
-            while (true) {
-                String frame = in.readLine();
-                if (frame != null) {
-                    System.out.println("Received frame: " + frame); // Print received frame for debugging
-                    // Process the frame and perform Ethernet learning
-                    // Extract source and destination MAC addresses
-                    String[] frameData = frame.split("\\|");
-                    String sourceMAC = frameData[1];
-                    String destinationMAC = frameData[2];
-
-                    // Broadcast the frame to other neighbors
-                    parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
-                    System.out.println("Broadcasting frame: " + frame); // Print broadcasting frame for debugging
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
