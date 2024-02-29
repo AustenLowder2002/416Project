@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Objects;
 import java.util.Scanner;
 
 import static org.example.JsonObject.readConfigFile;
@@ -16,12 +17,10 @@ public class PC {
     private final String name;
     private final String ip;
     private final String mac;
-    private final int port;
 
-    public PC(String name, String ip, int port) {
+    public PC(String name, String ip) {
         this.name = name;
         this.ip = ip;
-        this.port = port;
         this.mac = generateMacAddress();
     }
 
@@ -68,14 +67,12 @@ public class PC {
 
         // Find the PC configuration based on the provided PC name
         String pcIp = null;
-        int pcPort = 0;
-        JsonArray devicesArray = config.getAsJsonArray("devices");
+        JsonArray devicesArray = Objects.requireNonNull(config).getAsJsonArray("devices");
         for (int i = 0; i < devicesArray.size(); i++) {
             JsonObject deviceObject = devicesArray.get(i).getAsJsonObject();
             String name = deviceObject.get("name").getAsString();
             if (name.equals(pcName)) {
                 pcIp = deviceObject.get("ip").getAsString();
-                pcPort = deviceObject.get("port").getAsInt();
                 break;
             }
         }
@@ -87,7 +84,7 @@ public class PC {
 
         InetAddress sIp = InetAddress.getByName(serverIp);
 
-        PC currentPC = new PC(pcName, pcIp, pcPort);
+        PC currentPC = new PC(pcName, pcIp);
         currentPC.start(sIp, serverPort);
     }
 

@@ -21,8 +21,7 @@ public class Switch {
     }
 
     public void start() {
-        try {
-            ServerSocket serverSocket = new ServerSocket(port);
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Switch " + name + " is running on port " + port);
 
             while (true) {
