@@ -28,7 +28,7 @@ public class PC {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             out.println(name);  // Send PC name to the switch
 
-            new PCReceiverThread(socket).start();
+            new PCReceiverThread(socket, mac).start();
 
             Scanner scanner = new Scanner(System.in);
             while (true) {
@@ -87,8 +87,7 @@ public class PC {
     private String generateMacAddress() {
         String namePart = name.substring(0, Math.min(name.length(), 6));
         String ipPart = ipToMacFormat(ip);
-
-        System.out.println(namePart + ipPart);
+        System.out.println(name + " " +namePart + ipPart);
         return namePart + ipPart;
     }
 
@@ -109,10 +108,11 @@ public class PC {
 class PCReceiverThread extends Thread {
     private Socket socket;
 
-    public PCReceiverThread(Socket socket) {
+    public PCReceiverThread(Socket socket, String mac) {
         this.socket = socket;
     }
 
+    private String mac;
     public void run() {
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -125,7 +125,7 @@ class PCReceiverThread extends Thread {
                 String destinationMAC = frameData[2];
                 String message = frameData[0];
 
-                if (destinationMAC.equals("PC's Virtual MAC")) {
+                if (destinationMAC.equals(mac)) {
                     System.out.println("Received message from " + sourceMAC + ": " + message);
                 }
             }
