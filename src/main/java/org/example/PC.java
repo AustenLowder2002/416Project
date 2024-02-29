@@ -33,6 +33,15 @@ public class PC {
 
             new PCReceiverThread(socket, mac).start();
 
+            // Separate thread for user input
+            new Thread(() -> handleUserInput(socket)).start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleUserInput(Socket socket) {
+        try {
             Scanner scanner = new Scanner(System.in);
             while (true) {
                 System.out.print("Enter a message: ");
@@ -44,10 +53,14 @@ public class PC {
                 // Constructing the frame with proper format
                 String frame = message + "|" + mac + "|" + destinationMAC;
                 System.out.println("Sending frame: " + frame); // Print the frame for debugging
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println(frame);
                 out.flush(); // Ensure the message is sent immediately
+
+                // Introduce a delay to give the user time to see their input before new input is requested
+                Thread.sleep(1000);
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -109,5 +122,6 @@ public class PC {
 
         return macBuilder.toString();
     }
+
 }
 
