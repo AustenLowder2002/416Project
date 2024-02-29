@@ -19,9 +19,11 @@ public class PC {
     private final String ip;
     private final String mac;
 
-    public PC(String name, String ip) {
+    private final String port;
+    public PC(String name, String ip, String port) {
         this.name = name;
         this.ip = ip;
+        this.port = port;
         this.mac = generateMacAddress();
     }
 
@@ -35,13 +37,13 @@ public class PC {
             new PCReceiverThread(socket, mac).start();
 
             // Separate thread for user input
-            new Thread(() -> handleUserInput(socket)).start();
+            new Thread(() -> handleUserInput(socket, port)).start();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void handleUserInput(Socket socket) {
+    private void handleUserInput(Socket socket, String pcPort) {
         try {
             Scanner scanner = new Scanner(System.in);
             while (true) {
@@ -51,8 +53,8 @@ public class PC {
                 System.out.print("Enter the destination MAC address: ");
                 String destinationMAC = scanner.nextLine();
 
-                // Constructing the frame with proper format
-                String frame = message + "|" + mac + "|" + destinationMAC;
+                // Constructing the frame with proper format including pcPort
+                String frame = message + "|" + mac + "|" + destinationMAC + "|" + pcPort;
                 System.out.println("Sending frame: " + frame); // Print the frame for debugging
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println(frame);
@@ -81,34 +83,36 @@ public class PC {
 
         // Find the PC configuration based on the provided PC name
         String pcIp = null;
+        String pcPort = null;
         JsonArray devicesArray = Objects.requireNonNull(config).getAsJsonArray("devices");
         for (int i = 0; i < devicesArray.size(); i++) {
             JsonObject deviceObject = devicesArray.get(i).getAsJsonObject();
             String name = deviceObject.get("name").getAsString();
             if (name.equals(pcName)) {
                 pcIp = deviceObject.get("ip").getAsString();
+                pcPort = deviceObject.get("port").getAsString();
                 break;
             }
         }
 
-        if (pcIp == null) {
+        if (pcIp == null || pcPort == null) {
             System.out.println("PC with name '" + pcName + "' not found in the configuration.");
             return;
         }
 
         InetAddress sIp = InetAddress.getByName(serverIp);
 
-        PC currentPC = new PC(pcName, pcIp);
+        PC currentPC = new PC(pcName, pcIp, pcPort);
         currentPC.start(sIp, serverPort);
     }
-
 
 
     private String generateMacAddress() {
         String namePart = name.substring(0, Math.min(name.length(), 6));
         String ipPart = ipToMacFormat(ip);
-        System.out.println(name + " " +namePart + ipPart);
-        return namePart + ipPart;
+        String portPart = port.length() >= 4 ? port.substring(0, 4) : port;
+        System.out.println(name + " " + namePart + ipPart + portPart);
+        return namePart + ipPart + portPart;
     }
 
     private String ipToMacFormat(String ip) {
