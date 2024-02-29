@@ -18,7 +18,6 @@ public class PC {
     private final String name;
     private final String ip;
     private final String mac;
-
     private final String port;
     public PC(String name, String ip, String port) {
         this.name = name;
