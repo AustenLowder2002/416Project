@@ -83,8 +83,6 @@ public class Switch {
             return;
         }
 
-        InetAddress sIp = InetAddress.getByName(switchIp);
-
         Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
         currentSwitch.start(serverPort);
     }
@@ -128,7 +126,7 @@ class SwitchThread extends Thread {
 
                     // Broadcast the frame to other neighbors
                     parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
-                    System.out.println("Broadcasted frame: " + frame); // Print broadcasted frame for debugging
+                    System.out.println("Broadcasting frame: " + frame); // Print broadcasting frame for debugging
                 }
             }
         } catch (IOException e) {
