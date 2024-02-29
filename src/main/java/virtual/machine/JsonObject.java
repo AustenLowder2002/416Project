@@ -1,4 +1,4 @@
-package org.example;
+package virtual.machine;
 
 import com.google.gson.JsonParser;
 

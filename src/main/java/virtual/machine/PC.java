@@ -1,4 +1,4 @@
-package org.example;
+package virtual.machine;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
-import static org.example.JsonObject.readConfigFile;
+import static virtual.machine.JsonObject.readConfigFile;
 
 public class PC {
     private final String name;

@@ -1,4 +1,4 @@
-package org.example;
+package virtual.machine;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -8,7 +8,7 @@ import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.example.JsonObject.readConfigFile;
+import static virtual.machine.JsonObject.readConfigFile;
 
 public class Switch {
     private final String name;

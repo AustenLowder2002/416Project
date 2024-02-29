@@ -1,4 +1,4 @@
-package org.example;
+package virtual.machine;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,10 +21,11 @@ class SwitchThread extends Thread {
             parentSwitch.addNeighbor(neighborName, clientSocket);
             System.out.println("Connected with neighbor: " + neighborName); // Print a message indicating successful connection
 
-            while (true) {
+            // Continue to read frames as long as the connection is valid
+            while (!clientSocket.isClosed()) {
                 String frame = in.readLine();
                 if (frame != null) {
-                    System.out.println("Received frame: " + frame); // Print received frame for debugging
+                    System.out.println("Received frame: " + frame);
                     // Process the frame and perform Ethernet learning
                     // Extract source and destination MAC addresses
                     String[] frameData = frame.split("\\|");
@@ -33,11 +34,20 @@ class SwitchThread extends Thread {
 
                     // Broadcast the frame to other neighbors
                     parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
-                    System.out.println("Broadcasting frame: " + frame); // Print broadcasting frame for debugging
+                    System.out.println("Broadcasting frame: " + frame);
                 }
             }
         } catch (IOException e) {
+            // Handle the exception or print an error message
             e.printStackTrace();
+        } finally {
+            // Ensure resources are properly closed even if an exception occurs
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
+
