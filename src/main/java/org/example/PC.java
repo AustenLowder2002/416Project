@@ -60,7 +60,7 @@ public class PC {
         String pcName = args[2];
 
         // Read the configuration file
-        JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
+        JsonObject config = readConfigFile("C:/Users/auste/Documents/GitHub/416Project/src/main/java/file.json");
 
         // Find the PC configuration based on the provided PC name
         String pcIp = null;
@@ -120,12 +120,13 @@ public class PC {
 
 class PCReceiverThread extends Thread {
     private Socket socket;
+    private String mac;
 
     public PCReceiverThread(Socket socket, String mac) {
         this.socket = socket;
+        this.mac = mac; // Add this line to set the mac attribute
     }
 
-    private String mac;
     public void run() {
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));

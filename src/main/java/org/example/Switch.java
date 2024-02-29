@@ -54,15 +54,14 @@ public class Switch {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        if (args.length != 2) {
-            System.out.println("Syntax: Switch <SwitchName> <ServerPort>");
+        if (args.length != 1) {
+            System.out.println("Syntax: Switch <SwitchName>");
             return;
         }
         String switchName = args[0];
-        int serverPort = Integer.parseInt(args[1]);
 
         // Read the configuration file
-        JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
+        JsonObject config = readConfigFile("C:/Users/auste/Documents/GitHub/416Project/src/main/java/file.json");
 
         // Find the switch configuration based on the provided switch name
         String switchIp = null;
@@ -84,7 +83,7 @@ public class Switch {
         }
 
         Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
-        currentSwitch.start(serverPort);
+        currentSwitch.start(switchPort);
     }
 
     private static JsonObject readConfigFile(String filename) {
