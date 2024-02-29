@@ -58,7 +58,7 @@ public class PC {
                 out.println(frame);
                 out.flush(); // Ensure the message is sent immediately
 
-                // Introduce a delay to give the user time to see their input before new input is requested
+                // Introduce a delay to give the user time to receive a message before new input is requested
                 TimeUnit.SECONDS.sleep(1);
             }
         } catch (IOException | InterruptedException e) {
