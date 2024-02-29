@@ -21,7 +21,7 @@ public class Switch {
         this.port = port;
     }
 
-    public void start() {
+    public void start(int serverPort) {
         try {
             ServerSocket serverSocket = new ServerSocket(port);
             System.out.println("Switch " + name + " is running on port " + port);
@@ -53,21 +53,40 @@ public class Switch {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnknownHostException {
+        if (args.length != 2) {
+            System.out.println("Syntax: Switch <SwitchName> <ServerPort>");
+            return;
+        }
+        String switchName = args[0];
+        int serverPort = Integer.parseInt(args[1]);
+
         // Read the configuration file
         JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
 
-        // Create Switch objects based on config file
+        // Find the switch configuration based on the provided switch name
+        String switchIp = null;
+        int switchPort = 0;
         JsonArray switchesArray = config.getAsJsonArray("switches");
         for (int i = 0; i < switchesArray.size(); i++) {
             JsonObject switchObject = switchesArray.get(i).getAsJsonObject();
-            String switchName = switchObject.get("name").getAsString();
-            String switchIp = switchObject.get("ip").getAsString();
-            int switchPort = switchObject.get("port").getAsInt();
-
-            Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
-            new Thread(currentSwitch::start).start();
+            String name = switchObject.get("name").getAsString();
+            if (name.equals(switchName)) {
+                switchIp = switchObject.get("ip").getAsString();
+                switchPort = switchObject.get("port").getAsInt();
+                break;
+            }
         }
+
+        if (switchIp == null) {
+            System.out.println("Switch with name '" + switchName + "' not found in the configuration.");
+            return;
+        }
+
+        InetAddress sIp = InetAddress.getByName(switchIp);
+
+        Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
+        currentSwitch.start(serverPort);
     }
 
     private static JsonObject readConfigFile(String filename) {

@@ -51,27 +51,40 @@ public class PC {
 
 
     public static void main(String[] args) throws UnknownHostException {
-        if (args.length != 2) {
-            System.out.println("Syntax: PC <ServerIP> <ServerPort>");
+        if (args.length != 3) {
+            System.out.println("Syntax: PC <ServerIP> <ServerPort> <PCName>");
             return;
         }
-        int sPort = Integer.parseInt(args[1]);
-        InetAddress sIp = InetAddress.getByName(args[0]);
+        String serverIp = args[0];
+        int serverPort = Integer.parseInt(args[1]);
+        String pcName = args[2];
 
         // Read the configuration file
         JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
 
-        // Create PC objects based on config
+        // Find the PC configuration based on the provided PC name
+        String pcIp = null;
+        int pcPort = 0;
         JsonArray devicesArray = config.getAsJsonArray("devices");
         for (int i = 0; i < devicesArray.size(); i++) {
             JsonObject deviceObject = devicesArray.get(i).getAsJsonObject();
-            String pcName = deviceObject.get("name").getAsString();
-            String pcIp = deviceObject.get("ip").getAsString();
-            int pcPort = deviceObject.get("port").getAsInt();
-
-            PC currentPC = new PC(pcName, pcIp, pcPort);
-            new Thread(() -> currentPC.start(sIp, sPort)).start();
+            String name = deviceObject.get("name").getAsString();
+            if (name.equals(pcName)) {
+                pcIp = deviceObject.get("ip").getAsString();
+                pcPort = deviceObject.get("port").getAsInt();
+                break;
+            }
         }
+
+        if (pcIp == null) {
+            System.out.println("PC with name '" + pcName + "' not found in the configuration.");
+            return;
+        }
+
+        InetAddress sIp = InetAddress.getByName(serverIp);
+
+        PC currentPC = new PC(pcName, pcIp, pcPort);
+        currentPC.start(sIp, serverPort);
     }
 
     private static JsonObject readConfigFile(String filename) {
