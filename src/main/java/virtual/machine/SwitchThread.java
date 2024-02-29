@@ -38,10 +38,8 @@ class SwitchThread extends Thread {
                 }
             }
         } catch (IOException e) {
-            // Handle the exception or print an error message
             e.printStackTrace();
         } finally {
-            // Ensure resources are properly closed even if an exception occurs
             try {
                 clientSocket.close();
             } catch (IOException e) {

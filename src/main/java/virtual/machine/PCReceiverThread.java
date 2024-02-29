@@ -11,7 +11,7 @@ class PCReceiverThread extends Thread {
 
     public PCReceiverThread(Socket socket, String mac) {
         this.socket = socket;
-        this.mac = mac; // Add this line to set the mac attribute
+        this.mac = mac;
     }
 
     public void run() {
