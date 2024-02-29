@@ -59,7 +59,7 @@ public class Switch {
         String switchName = args[0];
 
         // Read the configuration file
-        JsonObject config = readConfigFile("C:/Users/auste/Documents/GitHub/416Project/src/main/java/file.json");
+        JsonObject config = readConfigFile("file.json");
 
         // Find the switch configuration based on the provided switch name
         String switchIp = null;

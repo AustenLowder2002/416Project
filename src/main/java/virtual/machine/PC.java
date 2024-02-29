@@ -78,7 +78,7 @@ public class PC {
         String pcName = args[2];
 
         // Read the configuration file
-        JsonObject config = readConfigFile("C:/Users/auste/Documents/GitHub/416Project/src/main/java/file.json");
+        JsonObject config = readConfigFile("file.json");
 
         // Find the PC configuration based on the provided PC name
         String pcIp = null;
