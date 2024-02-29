@@ -2,19 +2,21 @@ package org.example;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 
 import static org.example.JsonObject.readConfigFile;
 
 public class PC {
-    private String name;
-    private String ip;
-    private String mac;
-    private int port;
+    private final String name;
+    private final String ip;
+    private final String mac;
+    private final int port;
 
     public PC(String name, String ip, int port) {
         this.name = name;

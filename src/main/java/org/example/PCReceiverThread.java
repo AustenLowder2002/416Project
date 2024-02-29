@@ -6,8 +6,8 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 
 class PCReceiverThread extends Thread {
-    private Socket socket;
-    private String mac;
+    private final Socket socket;
+    private final String mac;
 
     public PCReceiverThread(Socket socket, String mac) {
         this.socket = socket;

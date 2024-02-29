@@ -6,8 +6,8 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 
 class SwitchThread extends Thread {
-    private Socket clientSocket;
-    private Switch parentSwitch;
+    private final Socket clientSocket;
+    private final Switch parentSwitch;
 
     public SwitchThread(Socket clientSocket, Switch parentSwitch) {
         this.clientSocket = clientSocket;

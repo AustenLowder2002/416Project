@@ -11,18 +11,16 @@ import java.util.Map;
 import static org.example.JsonObject.readConfigFile;
 
 public class Switch {
-    private String name;
-    private String ip;
-    private int port;
-    private Map<String, Socket> neighbors = new HashMap<>();
+    private final String name;
+    private final int port;
+    private final Map<String, Socket> neighbors = new HashMap<>();
 
-    public Switch(String name, String ip, int port) {
+    public Switch(String name, int port) {
         this.name = name;
-        this.ip = ip;
         this.port = port;
     }
 
-    public void start(int serverPort) {
+    public void start() {
         try {
             ServerSocket serverSocket = new ServerSocket(port);
             System.out.println("Switch " + name + " is running on port " + port);
@@ -54,7 +52,7 @@ public class Switch {
         }
     }
 
-    public static void main(String[] args) throws UnknownHostException {
+    public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Syntax: Switch <SwitchName>");
             return;
@@ -67,6 +65,7 @@ public class Switch {
         // Find the switch configuration based on the provided switch name
         String switchIp = null;
         int switchPort = 0;
+        assert config != null;
         JsonArray switchesArray = config.getAsJsonArray("switches");
         for (int i = 0; i < switchesArray.size(); i++) {
             JsonObject switchObject = switchesArray.get(i).getAsJsonObject();
@@ -83,8 +82,8 @@ public class Switch {
             return;
         }
 
-        Switch currentSwitch = new Switch(switchName, switchIp, switchPort);
-        currentSwitch.start(switchPort);
+        Switch currentSwitch = new Switch(switchName, switchPort);
+        currentSwitch.start();
     }
 }
 
