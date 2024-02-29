@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import static org.example.JsonObject.readConfigFile;
 
@@ -58,7 +59,7 @@ public class PC {
                 out.flush(); // Ensure the message is sent immediately
 
                 // Introduce a delay to give the user time to see their input before new input is requested
-                Thread.sleep(1000);
+                TimeUnit.SECONDS.sleep(1);
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
