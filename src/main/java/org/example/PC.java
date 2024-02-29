@@ -9,13 +9,10 @@ import java.net.*;
 import java.util.Scanner;
 
 public class PC {
-
     private String name;
     private String ip;
     private String mac;
     private int port;
-
-
 
     public PC(String name, String ip, int port) {
         this.name = name;
@@ -25,9 +22,9 @@ public class PC {
     }
 
     public void start(InetAddress sIp, int sPort) {
-
         try {
             Socket socket = new Socket(sIp, sPort);
+            System.out.println("Connected to switch at " + sIp + ":" + sPort); // Print a message indicating successful connection
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             out.println(name);  // Send PC name to the switch
 
@@ -41,25 +38,28 @@ public class PC {
                 System.out.print("Enter the destination MAC address: ");
                 String destinationMAC = scanner.nextLine();
 
-                String frame = message + "|" + name + "|" + destinationMAC;
-                out.println(frame + "|" + name);
+                // Constructing the frame with proper format
+                String frame = message + "|" + mac + "|" + destinationMAC;
+                System.out.println("Sending frame: " + frame); // Print the frame for debugging
+                out.println(frame);
+                out.flush(); // Ensure the message is sent immediately
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+
     public static void main(String[] args) throws UnknownHostException {
         if (args.length != 2) {
-            System.out.println("Syntax: TCPFileServiceClient <ServerIP> <ServerPort>");
+            System.out.println("Syntax: PC <ServerIP> <ServerPort>");
             return;
         }
         int sPort = Integer.parseInt(args[1]);
         InetAddress sIp = InetAddress.getByName(args[0]);
 
-
         // Read the configuration file
-        JsonObject config = readConfigFile("C:/Users/auste/IdeaProjects/help/src/main/java//file.json");
+        JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
 
         // Create PC objects based on config
         JsonArray devicesArray = config.getAsJsonArray("devices");
@@ -83,6 +83,7 @@ public class PC {
             return null;
         }
     }
+
     private String generateMacAddress() {
         String namePart = name.substring(0, Math.min(name.length(), 6));
         String ipPart = ipToMacFormat(ip);
@@ -92,7 +93,6 @@ public class PC {
     }
 
     private String ipToMacFormat(String ip) {
-
         String[] ipParts = ip.split("\\.");
         StringBuilder macBuilder = new StringBuilder();
 
@@ -106,9 +106,7 @@ public class PC {
     }
 }
 
-
 class PCReceiverThread extends Thread {
-
     private Socket socket;
 
     public PCReceiverThread(Socket socket) {

@@ -1,6 +1,5 @@
 package org.example;
 
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -28,13 +27,16 @@ public class Switch {
             System.out.println("Switch " + name + " is running on port " + port);
 
             while (true) {
+                System.out.println("Waiting for a connection...");
                 Socket clientSocket = serverSocket.accept();
+                System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
                 new SwitchThread(clientSocket, this).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 
     public synchronized void addNeighbor(String neighborName, Socket socket) {
         neighbors.put(neighborName, socket);
@@ -53,7 +55,7 @@ public class Switch {
 
     public static void main(String[] args) {
         // Read the configuration file
-        JsonObject config = readConfigFile("C:/Users/auste/IdeaProjects/help/src/main/java//file.json");
+        JsonObject config = readConfigFile("C:\\Users\\denni\\OneDrive\\Documents\\GitHub\\416Project\\src\\main\\java\\file.json");
 
         // Create Switch objects based on config file
         JsonArray switchesArray = config.getAsJsonArray("switches");
@@ -79,7 +81,6 @@ public class Switch {
     }
 }
 
-
 class SwitchThread extends Thread {
     private Socket clientSocket;
     private Switch parentSwitch;
@@ -94,21 +95,25 @@ class SwitchThread extends Thread {
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             String neighborName = in.readLine();
             parentSwitch.addNeighbor(neighborName, clientSocket);
+            System.out.println("Connected with neighbor: " + neighborName); // Print a message indicating successful connection
 
             while (true) {
                 String frame = in.readLine();
-                // Process the frame and perform Ethernet learning
-                // Extract source and destination MAC addresses
-                String[] frameData = frame.split("\\|");
-                String sourceMAC = frameData[1];
-                String destinationMAC = frameData[2];
+                if (frame != null) {
+                    System.out.println("Received frame: " + frame); // Print received frame for debugging
+                    // Process the frame and perform Ethernet learning
+                    // Extract source and destination MAC addresses
+                    String[] frameData = frame.split("\\|");
+                    String sourceMAC = frameData[1];
+                    String destinationMAC = frameData[2];
 
-                // Broadcast the frame to other neighbors
-                parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
+                    // Broadcast the frame to other neighbors
+                    parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
+                    System.out.println("Broadcasted frame: " + frame); // Print broadcasted frame for debugging
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
-
