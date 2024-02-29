@@ -10,7 +10,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 import static virtual.machine.JsonObject.readConfigFile;
 
@@ -60,14 +59,21 @@ public class PC {
                 out.flush(); // Ensure the message is sent immediately
 
                 // Introduce a delay to give the user time to receive a message before new input is requested
-                TimeUnit.SECONDS.sleep(1);
+                try {
+                    Thread.sleep(1000); // Sleep for 1000 milliseconds (1 second)
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 
+    // needs flood frame first time sending across switch
+    //s1 needs to connect to s2
+    // c needs send to s2, s2 to s1, s1 to a/b
     public static void main(String[] args) throws UnknownHostException {
         if (args.length != 3) {
             System.out.println("Syntax: PC <ServerIP> <ServerPort> <PCName>");
