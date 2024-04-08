@@ -1,19 +1,23 @@
 package virtual.machine;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
-
-import static virtual.machine.JsonObject.readConfigFile;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Switch {
     private final String name;
     private final int port;
     private final Map<String, Socket> neighbors = new HashMap<>();
+    private final Map<String, Router> routers = new HashMap<>();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public Switch(String name, int port) {
         this.name = name;
@@ -28,61 +32,53 @@ public class Switch {
                 System.out.println("Waiting for a connection...");
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
-                new SwitchThread(clientSocket, this).start();
+                executor.execute(new SwitchThread(clientSocket, this));
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-
     public synchronized void addNeighbor(String neighborName, Socket socket) {
         neighbors.put(neighborName, socket);
     }
 
-    public synchronized void broadcastFrame(String frame, String sourceMAC, String destinationMAC) {
+    public synchronized void addRouter(String routerName, Router router) {
+        routers.put(routerName, router);
+    }
+
+    public synchronized void sendRoutingUpdate(String routerName, String routingUpdate) {
         for (Socket neighborSocket : neighbors.values()) {
             try {
                 PrintWriter out = new PrintWriter(neighborSocket.getOutputStream(), true);
-                out.println(frame + "|" + sourceMAC + "|" + destinationMAC);
+                out.println("ROUTING_UPDATE|" + routerName + "|" + routingUpdate);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public static void main(String[] args) {
-        if (args.length != 1) {
-            System.out.println("Syntax: Switch <SwitchName>");
-            return;
+    public synchronized void forwardFrameToRouter(String routerName, String frame) {
+        Router router = routers.get(routerName);
+        if (router != null) {
+            router.receiveFrame(frame);
+        } else {
+            System.err.println("Router " + routerName + " not found!");
         }
-        String switchName = args[0];
+    }
 
-        // Read the configuration file
-        JsonObject config = readConfigFile("file.json");
-
-        // Find the switch configuration based on the provided switch name
-        String switchIp = null;
-        int switchPort = 0;
-        assert config != null;
-        JsonArray switchesArray = config.getAsJsonArray("switches");
-        for (int i = 0; i < switchesArray.size(); i++) {
-            JsonObject switchObject = switchesArray.get(i).getAsJsonObject();
-            String name = switchObject.get("name").getAsString();
-            if (name.equals(switchName)) {
-                switchIp = switchObject.get("ip").getAsString();
-                switchPort = switchObject.get("port").getAsInt();
-                break;
-            }
+    public synchronized void forwardFrameToPC(String routerName, String frame) {
+        Router router = routers.get(routerName);
+        if (router != null) {
+            router.forwardFrameToPC(frame);
+        } else {
+            System.err.println("Router " + routerName + " not found!");
         }
+    }
 
-        if (switchIp == null) {
-            System.out.println("Switch with name '" + switchName + "' not found in the configuration.");
-            return;
-        }
-
-        Switch currentSwitch = new Switch(switchName, switchPort);
-        currentSwitch.start();
+    public void shutdown() {
+        executor.shutdown();
     }
 }
+
 
