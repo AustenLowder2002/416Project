@@ -71,14 +71,15 @@ public class Router {
         // Extract destination MAC address from the frame
         String[] frameParts = frame.split("\\|");
         String destinationMAC = frameParts[2];
-        String nextHop = " ";
-        // Look up the next hop router or directly connected PC in the routing table
-        nextHop = nextHop.get(destinationMAC);
+        String nextHopRouter = " ";
 
-        if (nextHop != null) {
-            if (nextHop.startsWith("r")) {
+        // Look up the next hop router or directly connected PC in the routing table
+        nextHopRouter = nextHop.get(destinationMAC);
+
+        if (nextHopRouter != null) {
+            if (nextHopRouter.startsWith("r")) {
                 // Forward the frame to the next hop router
-                forwardFrameToRouter(frame, nextHop);
+                forwardFrameToRouter(frame, nextHopRouter);
             } else {
                 // Forward the frame to the directly connected PC
                 forwardFrameToPC(frame);
@@ -88,6 +89,14 @@ public class Router {
         }
     }
 
-
-    // Other methods as needed
+    public synchronized void printRoutingTable() {
+        System.out.println("Routing table for router " + name + ":");
+        for (Map.Entry<String, Integer> entry : routingTable.entrySet()) {
+            String subnet = entry.getKey();
+            int distance = entry.getValue();
+            String nextHopRouter = nextHop.get(subnet);
+            System.out.println("Subnet: " + subnet + ", Distance: " + distance + ", Next Hop: " + nextHopRouter);
+        }
+    }
 }
+

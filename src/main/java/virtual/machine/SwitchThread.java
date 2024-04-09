@@ -32,9 +32,17 @@ class SwitchThread extends Thread {
                     String sourceMAC = frameData[1];
                     String destinationMAC = frameData[2];
 
-                    // Broadcast the frame to other neighbors
-                    parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
-                    System.out.println("Broadcasting frame: " + frame);
+                    // Check if destination MAC is a PC or a router
+                    if (destinationMAC.startsWith("PC")) {
+                        // Forward the frame to the PC
+                        parentSwitch.forwardFrameToPC(frame, destinationMAC);
+                    } else if (destinationMAC.startsWith("R")) {
+                        // Forward the frame to the router
+                        parentSwitch.forwardFrameToRouter(frame, destinationMAC);
+                    } else {
+                        System.err.println("Invalid destination MAC: " + destinationMAC);
+                    }
+                    System.out.println("Forwarding frame: " + frame);
                 }
             }
         } catch (IOException e) {

@@ -1,8 +1,6 @@
 package virtual.machine;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -106,7 +104,3 @@ public class PC {
 
 
 }
-
-//implement a virtual router that runs the distance vector routing,  connect all routers at startup so they can find all subnets and store it in a routing table (n2,(3, r3.n3)) so n2 is the subnet its distance sway is 3 and the next gop is r3.n3
-//
-//based off this code;
