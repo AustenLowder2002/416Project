@@ -22,6 +22,6 @@ public class RoutingTable {
     public int getDistance(String subnet) {
         // Get the distance for the given subnet from the routing table
         Integer distance = subnetDistances.get(subnet);
-        return (distance != null) ? distance : -1; // Return -1 if subnet not found
+        return (distance != null) ? distance : -1;
     }
 }
