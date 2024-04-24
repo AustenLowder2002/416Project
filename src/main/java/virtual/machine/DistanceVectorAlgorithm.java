@@ -3,16 +3,16 @@ package virtual.machine;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 
 import static virtual.machine.JsonObject.readConfigFile;
 
 public class DistanceVectorAlgorithm {
-    private static final String CONFIG_FILE = "config.json";
+    private static final String CONFIG_FILE = "C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json";
     private static Map<String, Integer> distanceVector = new HashMap<>();
     private static Map<String, String> nextHop = new HashMap<>();
     private static Random random = new Random();
@@ -26,15 +26,26 @@ public class DistanceVectorAlgorithm {
     }
 
     private static void initializeDistanceVector(JsonObject config) {
-        JsonObject routers = config.getAsJsonObject("routers");
-        for (Map.Entry<String, JsonElement> entry : routers.entrySet()) {
-            String routerName = entry.getKey();
-            distanceVector.put(routerName, Integer.MAX_VALUE); // Initialize with maximum value
-            nextHop.put(routerName, null); // Initialize with null
+        JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
+        for (JsonElement element : routersArray) {
+            JsonObject router = element.getAsJsonObject();
+            JsonElement nameElement = router.get("name");
+            if (nameElement != null && !nameElement.isJsonNull()) {
+                String routerName = nameElement.getAsString();
+                JsonArray links = router.getAsJsonArray("links");
+                if (links != null) {
+                    for (JsonElement linkElement : links) {
+                        String connectedTo = linkElement.getAsString();
+                        distanceVector.put(connectedTo, Integer.MAX_VALUE); // Initialize with maximum value
+                        nextHop.put(connectedTo, null); // Initialize with null
+                    }
+                }
+            }
         }
         // Set distance to self as 0
-        distanceVector.put(config.get("self").getAsString(), 0);
+        // distanceVector.put(config.get("self").getAsString(), 0);
     }
+
 
     private static void runDistanceVectorAlgorithm() {
         boolean updated;
