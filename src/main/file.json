@@ -3,7 +3,8 @@
     {
       "name": "s1",
       "ip": "localhost",
-      "port": 3000
+      "port": 3000,
+      "subnet": "net1"
     },
     {
       "name": "s2",
