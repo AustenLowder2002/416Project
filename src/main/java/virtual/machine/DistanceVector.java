@@ -20,20 +20,21 @@ public class DistanceVector {
             parseSubnets(config.getAsJsonObject("subnets"));
 
             // Debug: Print routers and links
-            System.out.println("Routers and Links:");
-            for (Router router : routers.values()) {
-                System.out.println("Router: " + router.getName());
-                for (String link : router.getLinks()) {
-                    System.out.println("  Link: " + link);
-                }
-            }
+//            System.out.println("Routers and Links:");
+//            for (Router router : routers.values()) {
+//                System.out.println("Router: " + router.getName());
+//                for (String link : router.getLinks()) {
+//                    System.out.println("  Link: " + link);
+//                }
+//            }
 
             calculateDistances();
 
             // Debug: Print routing tables
-            printRoutingTables();
+           printRoutingTables();
         }
     }
+
 
 
     public static void parseRouters(JsonArray routersArray) {
@@ -48,7 +49,7 @@ public class DistanceVector {
                 if (routers.containsKey(linkName) || linkName.startsWith("r")) {
                     router.addLink(linkName);
                 } else {
-                    System.out.println("Invalid link for router " + name + ": " + linkName);
+                    //System.out.println("Invalid link for router " + name + ": " + linkName);
                 }
             }
             routers.put(name, router);
@@ -66,11 +67,20 @@ public class DistanceVector {
             private final String name;
             private final Map<String, Integer> distances;
             private final Map<String, String> routes;
+            private final Map<String, String> routeUpdates = new HashMap<>();
 
             public Router(String name) {
                 this.name = name;
                 this.distances = new HashMap<>();
                 this.routes = new HashMap<>();
+            }
+
+            public void updateRoutes(Map<String, String> routeUpdates) {
+                for (Map.Entry<String, String> entry : routeUpdates.entrySet()) {
+                    String destination = entry.getKey();
+                    String nextHop = entry.getValue();
+                    routes.put(destination, nextHop);
+                }
             }
 
             public String getName() {
@@ -106,7 +116,14 @@ public class DistanceVector {
             public Iterable<String> getLinks() {
                 return distances.keySet();
             }
+            public Map<String, String> getRouteUpdates() {
+                return routeUpdates;
+            }
+            public void clearRouteUpdates() {
+                routeUpdates.clear();
+            }
         }
+
 
     public static void calculateDistances() {
         Random random = new Random();
@@ -119,6 +136,7 @@ public class DistanceVector {
             // Step 1: Calculate potential updates
             for (Router router : routers.values()) {
                 Map<String, Integer> potentialUpdates = new HashMap<>();
+                Map<String, String> routeUpdates = new HashMap<>(); // Track the route updates
                 for (String neighbor : router.getLinks()) {
                     if (routers.containsKey(neighbor)) { // Check if neighbor is a router
                         Router neighborRouter = routers.get(neighbor);
@@ -130,18 +148,36 @@ public class DistanceVector {
                                 if (router.hasRoute(destination) && distance == router.getDistance(destination)) {
                                     if (random.nextBoolean()) {
                                         potentialUpdates.put(destination, distance);
+                                        routeUpdates.put(destination, neighborRouter.getName()); // Track route update
                                         updated = true;
                                     }
                                 } else {
                                     potentialUpdates.put(destination, distance);
+                                    routeUpdates.put(destination, neighborRouter.getName()); // Track route update
                                     updated = true;
                                 }
                             }
                         }
                     }
                 }
-                updates.put(router, potentialUpdates);
+                // Merge potential updates into existing distances
+                for (Map.Entry<String, Integer> update : potentialUpdates.entrySet()) {
+                    String destination = update.getKey();
+                    int distance = update.getValue();
+                    router.updateDistance(destination, distance, routeUpdates.get(destination));
+                }
+                updates.put(router, potentialUpdates); // Store potential distance updates
             }
+
+            // Debug: Print potential updates
+            //System.out.println("Potential Updates:");
+//            for (Map.Entry<Router, Map<String, Integer>> entry : updates.entrySet()) {
+//                Router router = entry.getKey();
+//                System.out.println("Router: " + router.getName());
+//                for (Map.Entry<String, Integer> update : entry.getValue().entrySet()) {
+//                    System.out.println("Destination: " + update.getKey() + ", Distance: " + update.getValue());
+//                }
+//            }
 
             // Step 2: Apply updates
             for (Map.Entry<Router, Map<String, Integer>> entry : updates.entrySet()) {
@@ -149,37 +185,52 @@ public class DistanceVector {
                 Map<String, Integer> potentialUpdates = entry.getValue();
                 for (Map.Entry<String, Integer> update : potentialUpdates.entrySet()) {
                     String destination = update.getKey();
-                    Router destinationRouter = routers.get(destination);
-                    if (destinationRouter != null) { // Check if destination is a router
-                        // Update distance with the correct destination router's name
-                        String route = destinationRouter.getName();
-                        router.updateDistance(destination, update.getValue(), route);
-                    }
+                    int distance = update.getValue();
+                    String nextHopRouterName = router.getRoute(destination); // Retrieve the next hop router name
+                    router.updateDistance(destination, distance, nextHopRouterName); // Update distance and next hop router
                 }
             }
+
+            // Clear route updates for the next iteration
+            for (Router router : routers.values()) {
+                router.clearRouteUpdates();
+            }
+
+            // Debug: Print route updates
+            /*System.out.println("Route Updates:");
+            for (Router router : routers.values()) {
+                Map<String, String> routeUpdates = router.getRouteUpdates();
+                System.out.println("Router: " + router.getName());
+                for (Map.Entry<String, String> update : routeUpdates.entrySet()) {
+                    System.out.println("Destination: " + update.getKey() + ", Next Hop: " + update.getValue());
+                }
+            }*/
+
         } while (updated);
     }
+
+
+
+
 
 
     public static void printRoutingTables() {
         for (Router router : routers.values()) {
             System.out.println("Routing table for Router " + router.getName() + ":");
-            System.out.println("+-------------+----------+--------+");
-            System.out.println("| Destination | Distance |  Route(HOP) |");
-            System.out.println("+-------------+----------+--------+");
+            System.out.println("+-------------+----------+----------------+-------------+");
+            System.out.println("| Destination | Distance | Next Hop Router| Route       |");
+            System.out.println("+-------------+----------+----------------+-------------+");
             for (Map.Entry<String, Integer> entry : router.getDistances().entrySet()) {
                 String destination = entry.getKey();
                 int distance = entry.getValue();
-                String route = router.getRoute(destination);
-                // Replace the router name with its proper name if available
-                String properRoute = routers.containsKey(route) ? routers.get(route).getName() : route;
-                // Padding for alignment
+                String nextHop = router.getRoute(destination);
+                String properNextHop = routers.containsKey(nextHop) ? routers.get(nextHop).getName() : nextHop;
                 String paddedDestination = String.format("%-12s", destination);
                 String paddedDistance = String.format("%-9d", distance);
-                String paddedRoute = String.format("%-7s", properRoute != null ? properRoute : "Unknown");
-                System.out.println("| " + paddedDestination + " | " + paddedDistance + " | " + paddedRoute + " |");
+                String paddedNextHop = String.format("%-15s", properNextHop != null ? properNextHop : "Unknown");
+                System.out.println("| " + paddedDestination + " | " + paddedDistance + " | " + paddedNextHop + " | " + nextHop + " |");
             }
-            System.out.println("+-------------+----------+--------+\n");
+            System.out.println("+-------------+----------+----------------+-------------+\n");
         }
     }
 }

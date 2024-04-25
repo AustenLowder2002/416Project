@@ -2,15 +2,23 @@
   "routers": [
     {
       "name": "r1",
-      "links": ["r2" , "subnet2"]
+      "links": ["r2", "r4" , "subnet2"]
     },
     {
       "name": "r2",
-      "links": ["r1", "r3", "subnet1"]
+      "links": ["r1", "r3", "subnet2"]
     },
     {
       "name": "r3",
-      "links": ["r2", "subnet1"]
+      "links": ["r2","r4", "subnet1"]
+    },
+    {
+      "name": "r4",
+      "links": ["r5", "r3", "subnet1"]
+    },
+    {
+      "name": "r5",
+      "links": ["r4", "subnet1"]
     }
   ],
   "subnets": {
