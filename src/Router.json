@@ -2,6 +2,9 @@
   "routers": [
     {
       "name": "r1",
+      "ip": "192.168.1.0",
+      "port": 5000,
+      "mac": "AA:BB:CC:DD",
       "links": ["r2", "r4" , "subnet2"]
     },
     {

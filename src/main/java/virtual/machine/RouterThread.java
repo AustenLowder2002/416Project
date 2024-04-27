@@ -1,41 +1,50 @@
 package virtual.machine;
 
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 
-public class RouterThread extends Thread {
+class RouterThread extends Thread {
+    private final Socket clientSocket;
     private final Router parentRouter;
 
-    public RouterThread(Router parentRouter) {
+    public RouterThread(Socket clientSocket, Router parentRouter) {
+        this.clientSocket = clientSocket;
         this.parentRouter = parentRouter;
     }
 
     public void run() {
-        // Place your UDP packet sending and receiving logic here
-        // You can use DatagramSocket to send and receive UDP packets
-        // Example:
-        try (DatagramSocket socket = new DatagramSocket()) {
-            // Send UDP packet
-            InetAddress destinationAddress = InetAddress.getByName("destination_ip");
-            int destinationPort = 1234;
-            byte[] sendData = "Hello, world!".getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
-            socket.send(sendPacket);
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            String neighborName = in.readLine();
+            parentRouter.addNeighbor(neighborName, clientSocket);
+            System.out.println("Connected with neighbor: " + neighborName); // Print a message indicating successful connection
 
-            // Receive UDP packet
-            byte[] receiveData = new byte[1024];
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-            socket.receive(receivePacket);
-            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            System.out.println("Received message: " + receivedMessage);
-        } catch (Exception e) {
+            // Continue to read frames as long as the connection is valid
+            while (!clientSocket.isClosed()) {
+                String frame = in.readLine();
+                if (frame != null) {
+                    System.out.println("Received frame: " + frame);
+                    // Process the frame and perform Ethernet learning
+                    // Extract source and destination MAC addresses
+                    String[] frameData = frame.split("\\|");
+                    String sourceMAC = frameData[1];
+                    String destinationMAC = frameData[2];
+
+                    // Broadcast the frame to other neighbors
+                    parentRouter.broadcastFrame(frame, sourceMAC, destinationMAC);
+                    System.out.println("Broadcasting frame: " + frame);
+                }
+            }
+        } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-
-    public static void main(String[] args) {
-        Router router = new Router("RouterName", 1234);
-        RouterThread routerThread = new RouterThread(router);
-        routerThread.start();
-    }
 }
-

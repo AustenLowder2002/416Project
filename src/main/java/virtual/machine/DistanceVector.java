@@ -41,7 +41,8 @@ public class DistanceVector {
         for (JsonElement element : routersArray) {
             JsonObject routerObj = element.getAsJsonObject();
             String name = routerObj.get("name").getAsString();
-            Router router = new Router(name);
+            int port = routerObj.get("port").getAsInt();
+            Router router = new Router(name, port);
             JsonArray linksArray = routerObj.getAsJsonArray("links");
             for (JsonElement link : linksArray) {
                 String linkName = link.getAsString();
