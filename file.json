@@ -4,19 +4,37 @@
       "name": "r1",
       "ip": "localhost",
       "port": 6002,
-      "links": ["r2"]
+      "links": ["r2", "r3"]
     },
     {
       "name": "r2",
       "ip": "localhost",
       "port": 6001,
-      "links": ["r1"]
+      "links": ["r1", "r5", "r3"]
     },
     {
       "name": "r3",
       "ip": "localhost",
       "port": 6003,
-      "links": ["r2"]
+      "links": ["r2", "r1"]
+    },
+    {
+      "name": "r4",
+      "ip": "localhost",
+      "port": 6004,
+      "links": ["r3", "r5", "r6"]
+    },
+    {
+      "name": "r5",
+      "ip": "localhost",
+      "port": 6005,
+      "links": ["r4", "r2", "r6"]
+    },
+    {
+      "name": "r6",
+      "ip": "localhost",
+      "port": 6006,
+      "links": ["r5", "r4"]
     }
   ],
   "switches": [
