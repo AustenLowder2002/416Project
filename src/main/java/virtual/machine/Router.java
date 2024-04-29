@@ -163,9 +163,4 @@ public class Router {
     public int getPort() {
         return port;
     }
-    public void resetDistances() {
-        for (String destination : distances.keySet()) {
-            distances.put(destination, Integer.MAX_VALUE); // Reset distance to infinity
-        }
     }
-}

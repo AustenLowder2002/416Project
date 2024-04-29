@@ -21,7 +21,7 @@ public class DistanceVector {
         parseSubnets(config.getAsJsonObject("subnets"));
 
 
-        calculateDistances();
+        calculateDistances(sourceRouter, destinationRouter);
         getRoutingTablesAsFrame(sourceRouter, destinationRouter);
     }
 
@@ -54,7 +54,7 @@ public class DistanceVector {
     }
 
 
-    public static void calculateDistances() {
+    public static void calculateDistances(String sourceRouter, String destinationRouter) {
         Random random = new Random();
         boolean updated;
 
@@ -65,22 +65,24 @@ public class DistanceVector {
             // Step 1: Calculate potential updates
             for (Router router : routers.values()) {
                 Map<String, Integer> potentialUpdates = new HashMap<>();
-                for (String neighbor : router.getLinks()) {
-                    if (routers.containsKey(neighbor)) { // Check if neighbor is a router
-                        Router neighborRouter = routers.get(neighbor);
-                        for (Map.Entry<String, Integer> entry : neighborRouter.getDistances().entrySet()) {
-                            String destination = entry.getKey();
-                            int distance = entry.getValue() + 1;
-                            if (!router.hasRoute(destination) || distance < router.getDistance(destination)) {
-                                // If there's already a route with the same distance, randomly choose one
-                                if (router.hasRoute(destination) && distance == router.getDistance(destination)) {
-                                    if (random.nextBoolean()) {
+                if (router.getName().equals(sourceRouter) || router.getName().equals(destinationRouter)) {
+                    for (String neighbor : router.getLinks()) {
+                        if (routers.containsKey(neighbor)) { // Check if neighbor is a router
+                            Router neighborRouter = routers.get(neighbor);
+                            for (Map.Entry<String, Integer> entry : neighborRouter.getDistances().entrySet()) {
+                                String destination = entry.getKey();
+                                int distance = entry.getValue() + 1;
+                                if (!router.hasRoute(destination) || distance < router.getDistance(destination)) {
+                                    // If there's already a route with the same distance, randomly choose one
+                                    if (router.hasRoute(destination) && distance == router.getDistance(destination)) {
+                                        if (random.nextBoolean()) {
+                                            potentialUpdates.put(destination, distance);
+                                            updated = true;
+                                        }
+                                    } else {
                                         potentialUpdates.put(destination, distance);
                                         updated = true;
                                     }
-                                } else {
-                                    potentialUpdates.put(destination, distance);
-                                    updated = true;
                                 }
                             }
                         }
@@ -95,16 +97,17 @@ public class DistanceVector {
                 Map<String, Integer> potentialUpdates = entry.getValue();
                 for (Map.Entry<String, Integer> update : potentialUpdates.entrySet()) {
                     String destination = update.getKey();
-                    Router destinationRouter = routers.get(destination);
-                    if (destinationRouter != null) { // Check if destination is a router
-                        // Update distance with the correct destination router's name
-                        String route = destinationRouter.getName();
-                        router.updateDistance(destination, update.getValue(), route);
-                    }
+                    // String destinationRouter = routers.get(destination); // No need to retrieve router object
+                    // if (destinationRouter != null) { // Check if destination is a router
+                    // Update distance with the correct destination router's name
+                    String route = destination; // Since destination is already the name of the router
+                    router.updateDistance(destination, update.getValue(), route);
+                    // }
                 }
             }
         } while (updated);
     }
+
 
 
 
@@ -120,12 +123,14 @@ public class DistanceVector {
                     String destination = entry.getKey();
                     int distance;
                     if (sourceRouter.equals(destinationRouter)) {
-                        distance = 0; // If sourceRouter and destinationRouter match, set distance to 0
+                        distance = 0;
                     } else {
                         distance = entry.getValue();
                     }
                     String nextHop = router.getRoute(destination);
-                    if (destination.equals(destinationRouter)) { // Only include entries for the destination router
+
+                    if (destination.equals(destinationRouter)) {
+                        // Add the routing entry for the destination router
                         JsonObject routeEntry = new JsonObject();
                         routeEntry.addProperty("destination", destination);
                         routeEntry.addProperty("distance", distance);
@@ -133,10 +138,14 @@ public class DistanceVector {
                         routingTable.add(routeEntry);
                     }
                 }
+
             }
         }
         frame.add("routingTable", routingTable);
         return frame.toString();
     }
+
+
+
 }
 
