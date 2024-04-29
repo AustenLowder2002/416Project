@@ -1,0 +1,41 @@
+{
+  "routers": [
+    {
+      "name": "r1",
+      "ip": "localhost",
+      "port": 6002,
+      "links": [
+        "r2"
+      ],
+      "subnets": [
+        "subnet1",
+        "subnet3"
+      ]
+    },
+    {
+      "name": "r2",
+      "ip": "localhost",
+      "port": 6001,
+      "links": [
+        "r3",
+        "r1"
+      ],
+      "subnets": [
+        "subnet1",
+        "subnet2"
+      ]
+    },
+    {
+      "name": "r3",
+      "ip": "localhost",
+      "port": 6003,
+      "links": [
+        "r2"
+      ],
+      "subnets": [
+        "subnet2",
+        "subnet4"
+      ]
+    }
+  ]
+}
