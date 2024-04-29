@@ -11,6 +11,12 @@
       "ip": "localhost",
       "port": 6001,
       "links": ["r1"]
+    },
+    {
+      "name": "r3",
+      "ip": "localhost",
+      "port": 6003,
+      "links": ["r2"]
     }
   ],
   "switches": [
