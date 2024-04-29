@@ -160,13 +160,12 @@ public class Router {
     public Iterable<String> getLinks() {
         return distances.keySet();
     }
-    public Map<String, String> getRouteUpdates() {
-        return routeUpdates;
-    }
-    public void clearRouteUpdates() {
-        routeUpdates.clear();
-    }
     public int getPort() {
         return port;
+    }
+    public void resetDistances() {
+        for (String destination : distances.keySet()) {
+            distances.put(destination, Integer.MAX_VALUE); // Reset distance to infinity
+        }
     }
 }

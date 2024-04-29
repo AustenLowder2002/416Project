@@ -5,10 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Map;
 import java.util.Scanner;
 
-import static virtual.machine.DistanceCalculator.calculateDistance;
 
 public class RouterThread extends Thread {
     private final Socket clientSocket;
@@ -55,24 +53,12 @@ public class RouterThread extends Thread {
             String destinationRouter = scanner.nextLine();
 
             // Calculate the distance to the destination router
-            DistanceResult distanceToDestination = DistanceCalculator.calculateDistance(parentRouter, destinationRouter);
+            DistanceVector.bingBong(parentRouter.getName(), destinationRouter);
+            String routingTableFrame = DistanceVector.getRoutingTablesAsFrame(parentRouter.getName(), destinationRouter);
 
-            // Get the distances and next hops as strings
-            Map<String, Integer> distances = distanceToDestination.getDistances();
-            Map<String, String> nextHops = distanceToDestination.getNextHops();
+            // Constructing the frame with proper format including routing table
+            String frame = routingTableFrame + "|" + parentRouter.getPort();
 
-            // Convert distances and next hops to strings
-            StringBuilder distancesString = new StringBuilder();
-            StringBuilder nextHopsString = new StringBuilder();
-            for (Map.Entry<String, Integer> entry : distances.entrySet()) {
-                distancesString.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
-            }
-            for (Map.Entry<String, String> entry : nextHops.entrySet()) {
-                nextHopsString.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
-            }
-
-            // Constructing the frame with proper format including distance
-            String frame = distancesString.toString() + "|" + nextHopsString.toString() + "|" + destinationRouter + "|" + parentRouter.getPort();
             System.out.println("Sending frame: " + frame); // Print the frame for debugging
 
             // Send the frame to the connected router
