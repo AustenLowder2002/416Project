@@ -1,12 +1,14 @@
 package virtual.machine;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static virtual.machine.JsonObject.readConfigFile;
 
@@ -26,24 +28,7 @@ public class Router {
         this.port = port;
         this.routerIp = routerIp;
     }
-
-    public void start() {
-        // Connect to other routers
-        connectToOtherRouters();
-
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Router " + name + " is running on port " + port + " with ip " + routerIp);
-
-            while (true) {
-                System.out.println("Waiting for a connection on port " + port + "...");
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
-                new RouterThread(clientSocket, this).start();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+    
 
     public synchronized void addNeighbor(String neighborName, Socket socket) {
         neighbors.put(neighborName, socket);
@@ -60,7 +45,21 @@ public class Router {
         }
     }
 
-    public static void main(String[] args) {
+    public void start() throws IOException {
+        connectToOtherRouters();
+
+        ServerSocket serverSocket = new ServerSocket(port);
+        System.out.println("Router " + name + " is running on port " + port + " with IP " + routerIp);
+
+        while (true) {
+            System.out.println("Waiting for a connection on port " + port + "...");
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
+            new RouterThread(clientSocket, this).start();
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
         if (args.length != 1) {
             System.out.println("Syntax: Router <RouterName>");
             return;
@@ -68,14 +67,14 @@ public class Router {
         String routerName = args[0];
 
         // Read the configuration file
-        com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
+        JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
 
-        // Find the router configuration based on the provided router name
-        int routerPort = 0;
-        JsonArray routersArray = config.getAsJsonArray("routers");
+        // Find router configuration based on provided router name
+        JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
         String routerIp = null;
+        int routerPort = 0;
         for (int i = 0; i < routersArray.size(); i++) {
-            com.google.gson.JsonObject routerObject = routersArray.get(i).getAsJsonObject();
+            JsonObject routerObject = routersArray.get(i).getAsJsonObject();
             String name = routerObject.get("name").getAsString();
             routerIp = routerObject.get("ip").getAsString();
             if (name.equals(routerName)) {
@@ -93,9 +92,10 @@ public class Router {
         currentRouter.start();
     }
 
+
     private void connectToOtherRouters() {
         com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
-        JsonArray routersArray = config.getAsJsonArray("routers");
+        JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
         boolean connected = false;
 
         while (!connected) {
@@ -108,7 +108,7 @@ public class Router {
                 if (!routerName.equals(name)) {
                     try {
                         System.out.println("Attempting to connect to router: " + routerName + " at IP: " + routerIp + " and port: " + routerPort);
-                        Socket socket = new Socket(routerIp, routerPort); // Connect to the specified IP address
+                        Socket socket = new Socket(routerIp, routerPort);
                         addNeighbor(routerName, socket);
                         System.out.println("Connected to router: " + routerName);
                         connected = true;
@@ -127,17 +127,6 @@ public class Router {
             }
         }
 
-    }
-
-
-
-
-    public void updateRoutes(Map<String, String> routeUpdates) {
-        for (Map.Entry<String, String> entry : routeUpdates.entrySet()) {
-            String destination = entry.getKey();
-            String nextHop = entry.getValue();
-            routes.put(destination, nextHop);
-        }
     }
 
     public String getName() {

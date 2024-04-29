@@ -14,7 +14,7 @@ public class DistanceVector {
     private static final Map<String, String> subnets = new HashMap<>();
 
     public static void main(String[] args) {
-        JsonObject config = readConfigFile("C:\\Users\\auste\\Documents\\GitHub\\416Project\\src\\Router.json");
+        JsonObject config = readConfigFile("file.json");
         if (config != null) {
             parseRouters(config.getAsJsonArray("routers"));
             parseSubnets(config.getAsJsonObject("subnets"));
@@ -43,7 +43,7 @@ public class DistanceVector {
             String name = routerObj.get("name").getAsString();
             int port = routerObj.get("port").getAsInt();
             String routerIp = routerObj.get("ip").getAsString();
-            Router router = new Router(name, port, routerIp);
+            Router router = new Router(name,  port, routerIp);
             JsonArray linksArray = routerObj.getAsJsonArray("links");
             for (JsonElement link : linksArray) {
                 String linkName = link.getAsString();

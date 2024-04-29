@@ -1,4 +1,16 @@
 {
+  "routers": [
+    {
+      "name": "r1",
+      "ip": "127.0.0.1",
+      "port": 5004
+    },
+    {
+      "name": "r2",
+      "ip": "127.0.0.2",
+      "port": 5005
+    }
+  ],
   "switches": [
     {
       "name": "s1",
@@ -9,7 +21,8 @@
     {
       "name": "s2",
       "ip": "localhost",
-      "port": 3001
+      "port": 3001,
+      "subnet": "net2"
     }
   ],
   "devices": [
@@ -55,5 +68,9 @@
       "node1": "s2",
       "node2": "D"
     }
-  ]
+  ],
+  "subnets": {
+    "net1": "subnet1",
+    "net2": "subnet2"
+  }
 }

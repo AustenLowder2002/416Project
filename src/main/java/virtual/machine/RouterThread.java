@@ -55,6 +55,8 @@ public class RouterThread extends Thread {
             }
         }
     }
+
+
     private void handleUserInput(PrintWriter out) throws IOException {
         Scanner scanner = new Scanner(System.in);
         while (true) {

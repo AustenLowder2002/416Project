@@ -28,7 +28,7 @@ public class PC {
     public void start(InetAddress sIp, int sPort) {
         try {
             Socket socket = new Socket(sIp, sPort);
-            System.out.println("Connected to switch at " + sIp + ":" + sPort); // Print a message indicating successful connection
+            System.out.println("Connected to Switch at " + sIp + ":" + sPort); // Print a message indicating successful connection
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             out.println(name);  // Send PC name to the switch
 
