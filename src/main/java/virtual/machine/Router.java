@@ -2,13 +2,11 @@ package virtual.machine;
 
 import com.google.gson.JsonArray;
 
-import javax.xml.xpath.XPathEvaluationResult;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 import static virtual.machine.JsonObject.readConfigFile;
 
@@ -18,95 +16,33 @@ public class Router {
     private final Map<String, String> routes;
     private final Map<String, String> routeUpdates = new HashMap<>();
     private final int port;
+    private final String routerIp;
     private final Map<String, Socket> neighbors = new HashMap<>();
 
-    public Router(String name, int port) {
+    public Router(String name, int port, String routerIp) {
         this.name = name;
         this.distances = new HashMap<>();
         this.routes = new HashMap<>();
         this.port = port;
+        this.routerIp = routerIp;
     }
 
+    public void start() {
+        // Connect to other routers
+        connectToOtherRouters();
 
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Router " + name + " is running on port " + port + " with ip " + routerIp);
 
-    public void start(InetAddress rIp, int rPort) {
-        try {
-            Socket socket = new Socket(rIp, rPort);
-            System.out.println("Connected to router at " + rIp + ":" + rPort); // Print a message indicating successful connection
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println(name);  // Send router name to another router
-
-            new RouterThread(socket, this).start();
-
-            // Separate thread for user input
-            new Thread(() -> handleUserInput(socket)).start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private void handleUserInput(Socket socket) {
-        try {
-            Scanner scanner = new Scanner(System.in);
             while (true) {
-                System.out.print("Enter a message: ");
-                String message = scanner.nextLine();
-
-                System.out.print("Enter the destination Router address: ");
-                String destinationRouter = scanner.nextLine();
-
-                // Constructing the frame with proper format including pcPort
-                String frame = message + "|" + "|" + destinationRouter + "|" + port;
-                System.out.println("Sending frame: " + frame); // Print the frame for debugging
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                out.println(frame);
-                out.flush(); // Ensure the message is sent immediately
-
-                // Introduce a delay to give the user time to receive a message before new input is requested
-                try {
-                    Thread.sleep(1000); // Sleep for 1000 milliseconds (1 second)
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                System.out.println("Waiting for a connection on port " + port + "...");
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
+                new RouterThread(clientSocket, this).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-    public static void main(String[] args) throws UnknownHostException {
-        if (args.length != 2) {
-            System.out.println("Syntax: Router <RouterName> <RouterPort>");
-            return;
-        }
-        String routerName = args[0];
-
-        // Read the configuration file
-        com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
-
-        // Find the switch configuration based on the provided switch name
-        String routerIp = null;
-        int routerPort = 0;
-        assert config != null;
-        JsonArray routersArray = config.getAsJsonArray("routers");
-        for (int i = 0; i < routersArray.size(); i++) {
-            com.google.gson.JsonObject routerObject = routersArray.get(i).getAsJsonObject();
-            String name = routerObject.get("name").getAsString();
-            if (name.equals(routerName)) {
-                routerIp = routerObject.get("ip").getAsString();
-                routerPort = routerObject.get("port").getAsInt();
-                break;
-            }
-        }
-
-        if (routerIp == null) {
-            System.out.println("Router with name '" + routerName + "' not found in the configuration.");
-            return;
-        }
-
-        Router currentRouter = new Router(routerName, routerPort);
-        currentRouter.start(InetAddress.getByName(routerIp), routerPort);
-
     }
 
     public synchronized void addNeighbor(String neighborName, Socket socket) {
@@ -123,6 +59,77 @@ public class Router {
             }
         }
     }
+
+    public static void main(String[] args) {
+        if (args.length != 1) {
+            System.out.println("Syntax: Router <RouterName>");
+            return;
+        }
+        String routerName = args[0];
+
+        // Read the configuration file
+        com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
+
+        // Find the router configuration based on the provided router name
+        int routerPort = 0;
+        JsonArray routersArray = config.getAsJsonArray("routers");
+        String routerIp = null;
+        for (int i = 0; i < routersArray.size(); i++) {
+            com.google.gson.JsonObject routerObject = routersArray.get(i).getAsJsonObject();
+            String name = routerObject.get("name").getAsString();
+            routerIp = routerObject.get("ip").getAsString();
+            if (name.equals(routerName)) {
+                routerPort = routerObject.get("port").getAsInt();
+                break;
+            }
+        }
+
+        if (routerPort == 0) {
+            System.out.println("Router with name '" + routerName + "' not found in the configuration.");
+            return;
+        }
+
+        Router currentRouter = new Router(routerName, routerPort, routerIp);
+        currentRouter.start();
+    }
+
+    private void connectToOtherRouters() {
+        com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
+        JsonArray routersArray = config.getAsJsonArray("routers");
+        boolean connected = false;
+
+        while (!connected) {
+            for (int i = 0; i < routersArray.size(); i++) {
+                com.google.gson.JsonObject routerObject = routersArray.get(i).getAsJsonObject();
+                String routerName = routerObject.get("name").getAsString();
+                int routerPort = routerObject.get("port").getAsInt();
+                String routerIp = routerObject.get("ip").getAsString();
+
+                if (!routerName.equals(name)) {
+                    try {
+                        System.out.println("Attempting to connect to router: " + routerName + " at IP: " + routerIp + " and port: " + routerPort);
+                        Socket socket = new Socket(routerIp, routerPort); // Connect to the specified IP address
+                        addNeighbor(routerName, socket);
+                        System.out.println("Connected to router: " + routerName);
+                        connected = true;
+                        break; // Exit loop once a connection is established
+                    } catch (IOException e) {
+                        System.out.println("Failed to connect to router: " + routerName + " at IP: " + routerIp + " and port: " + routerPort);
+                        e.printStackTrace();
+                        // Sleep for a short duration before attempting to connect again
+                        try {
+                            Thread.sleep(5000); // Sleep for 5 seconds before retrying
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+
 
 
     public void updateRoutes(Map<String, String> routeUpdates) {
