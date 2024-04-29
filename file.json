@@ -1,4 +1,18 @@
 {
+  "routers": [
+    {
+      "name": "r1",
+      "ip": "192.168.0.6",
+      "port": 6000,
+      "links": ["r2"]
+    },
+    {
+      "name": "r2",
+      "ip": "192.168.0.7",
+      "port": 6001,
+      "links": ["r1"]
+    }
+  ],
   "switches": [
     {
       "name": "s1",
@@ -54,5 +68,9 @@
       "node1": "s2",
       "node2": "D"
     }
-  ]
+  ],
+  "subnets": {
+    "net1": "subnet1",
+    "net2": "subnet2"
+  }
 }

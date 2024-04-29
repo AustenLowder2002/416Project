@@ -45,20 +45,6 @@ public class Router {
         }
     }
 
-    public void start() throws IOException {
-        connectToOtherRouters();
-
-        ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Router " + name + " is running on port " + port + " with IP " + routerIp);
-
-        while (true) {
-            System.out.println("Waiting for a connection on port " + port + "...");
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
-            new RouterThread(clientSocket, this).start();
-        }
-    }
-
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
             System.out.println("Syntax: Router <RouterName>");
@@ -67,7 +53,7 @@ public class Router {
         String routerName = args[0];
 
         // Read the configuration file
-        JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
+        JsonObject config = readConfigFile("file.json");
 
         // Find router configuration based on provided router name
         JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
@@ -93,40 +79,51 @@ public class Router {
     }
 
 
-    private void connectToOtherRouters() {
-        com.google.gson.JsonObject config = readConfigFile("C:\\Users\\Austen Lowder\\Documents\\GitHub\\416Project\\src\\Router.json");
+    public synchronized void connectToOtherRouters() {
+        JsonObject config = readConfigFile("file.json");
         JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
-        boolean connected = false;
 
-        while (!connected) {
-            for (int i = 0; i < routersArray.size(); i++) {
-                com.google.gson.JsonObject routerObject = routersArray.get(i).getAsJsonObject();
-                String routerName = routerObject.get("name").getAsString();
-                int routerPort = routerObject.get("port").getAsInt();
-                String routerIp = routerObject.get("ip").getAsString();
+        for (int i = 0; i < routersArray.size(); i++) {
+            JsonObject routerObject = routersArray.get(i).getAsJsonObject();
+            String neighborName = routerObject.get("name").getAsString();
+            String neighborIp = routerObject.get("ip").getAsString();
+            int neighborPort = routerObject.get("port").getAsInt();
 
-                if (!routerName.equals(name)) {
-                    try {
-                        System.out.println("Attempting to connect to router: " + routerName + " at IP: " + routerIp + " and port: " + routerPort);
-                        Socket socket = new Socket(routerIp, routerPort);
-                        addNeighbor(routerName, socket);
-                        System.out.println("Connected to router: " + routerName);
-                        connected = true;
-                        break; // Exit loop once a connection is established
-                    } catch (IOException e) {
-                        System.out.println("Failed to connect to router: " + routerName + " at IP: " + routerIp + " and port: " + routerPort);
-                        e.printStackTrace();
-                        // Sleep for a short duration before attempting to connect again
-                        try {
-                            Thread.sleep(5000); // Sleep for 5 seconds before retrying
-                        } catch (InterruptedException ex) {
-                            ex.printStackTrace();
-                        }
-                    }
+            if (!neighborName.equals(name)) {
+                try {
+                    System.out.println("Connecting to router: " + neighborName + " at IP: " + neighborIp + " and port: " + neighborPort);
+                    Socket socket = new Socket(neighborIp, neighborPort);
+                    neighbors.put(neighborName, socket);
+                    System.out.println("Connected to router: " + neighborName);
+                } catch (IOException e) {
+                    System.out.println("Failed to connect to router: " + neighborName + " at IP: " + neighborIp + " and port: " + neighborPort);
+                    e.printStackTrace();
                 }
             }
         }
+    }
 
+    public synchronized void startListening() {
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Router " + name + " is running on port " + port + " with IP " + routerIp);
+
+            while (true) {
+                System.out.println("Waiting for a connection on port " + port + "...");
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Accepted connection from: " + clientSocket.getInetAddress());
+                new RouterThread(clientSocket, this).start();
+            }
+        } catch (IOException e) {
+            System.out.println("Error starting router: " + e.getMessage());
+        }
+    }
+
+    public void start() {
+        if(name.equals("r1")){
+            startListening();
+        }else{
+        connectToOtherRouters();
+        }
     }
 
     public String getName() {
