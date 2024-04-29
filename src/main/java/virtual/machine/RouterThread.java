@@ -5,7 +5,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Map;
 import java.util.Scanner;
+
+import static virtual.machine.DistanceCalculator.calculateDistance;
 
 public class RouterThread extends Thread {
     private final Socket clientSocket;
@@ -14,37 +17,17 @@ public class RouterThread extends Thread {
     public RouterThread(Socket clientSocket, Router parentRouter) {
         this.clientSocket = clientSocket;
         this.parentRouter = parentRouter;
+        start();
     }
 
-    public void run() {
+    public void start() {
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
-            // Read the name of the connected router
-            String neighborName = in.readLine();
-            parentRouter.addNeighbor(neighborName, clientSocket);
-            System.out.println("Connected with neighbor: " + neighborName); // Print a message indicating successful connection
-
             // Handle user input
-            handleUserInput(out);
+            handleUserInput(in, out);
 
-            // Continue to read frames as long as the connection is valid
-            while (!clientSocket.isClosed()) {
-                String frame = in.readLine();
-                if (frame != null) {
-                    System.out.println("Received frame: " + frame);
-                    // Process the frame and perform Ethernet learning
-                    // Extract source and destination MAC addresses
-                    String[] frameData = frame.split("\\|");
-                    String sourceMAC = frameData[1];
-                    String destinationMAC = frameData[2];
-
-                    // Broadcast the frame to other neighbors
-                    parentRouter.broadcastFrame(frame, sourceMAC, destinationMAC);
-                    System.out.println("Broadcasting frame: " + frame);
-                }
-            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -57,17 +40,39 @@ public class RouterThread extends Thread {
     }
 
 
-    private void handleUserInput(PrintWriter out) throws IOException {
+    private void handleUserInput(BufferedReader in, PrintWriter out) throws IOException {
         Scanner scanner = new Scanner(System.in);
         while (true) {
+            // Check if there's any incoming frame
+            if (in.ready()) {
+                String receivedFrame = in.readLine();
+                System.out.println("Received frame: " + receivedFrame);
+                // Process the received frame as needed
+            }
+
+            // Prompt the user to enter the destination Router
             System.out.print("Enter the destination Router: ");
             String destinationRouter = scanner.nextLine();
 
             // Calculate the distance to the destination router
-            int distanceToDestination = parentRouter.getDistance(destinationRouter);
+            DistanceResult distanceToDestination = DistanceCalculator.calculateDistance(parentRouter, destinationRouter);
+
+            // Get the distances and next hops as strings
+            Map<String, Integer> distances = distanceToDestination.getDistances();
+            Map<String, String> nextHops = distanceToDestination.getNextHops();
+
+            // Convert distances and next hops to strings
+            StringBuilder distancesString = new StringBuilder();
+            StringBuilder nextHopsString = new StringBuilder();
+            for (Map.Entry<String, Integer> entry : distances.entrySet()) {
+                distancesString.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
+            }
+            for (Map.Entry<String, String> entry : nextHops.entrySet()) {
+                nextHopsString.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
+            }
 
             // Constructing the frame with proper format including distance
-            String frame = distanceToDestination + "|" + destinationRouter + "|" + parentRouter.getPort();
+            String frame = distancesString.toString() + "|" + nextHopsString.toString() + "|" + destinationRouter + "|" + parentRouter.getPort();
             System.out.println("Sending frame: " + frame); // Print the frame for debugging
 
             // Send the frame to the connected router
@@ -82,5 +87,7 @@ public class RouterThread extends Thread {
             }
         }
     }
+
+
 
 }

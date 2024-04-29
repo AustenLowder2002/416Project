@@ -34,11 +34,11 @@ public class Router {
         neighbors.put(neighborName, socket);
     }
 
-    public synchronized void broadcastFrame(String frame, String sourceMAC, String destinationMAC) {
+    public synchronized void broadcastFrame(String frame) {
         for (Socket neighborSocket : neighbors.values()) {
             try {
                 PrintWriter out = new PrintWriter(neighborSocket.getOutputStream(), true);
-                out.println(frame + "|" + sourceMAC + "|" + destinationMAC);
+                out.println(frame + "|");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -95,6 +95,7 @@ public class Router {
                     Socket socket = new Socket(neighborIp, neighborPort);
                     neighbors.put(neighborName, socket);
                     System.out.println("Connected to router: " + neighborName);
+                    new RouterThread(socket, this);
                 } catch (IOException e) {
                     System.out.println("Failed to connect to router: " + neighborName + " at IP: " + neighborIp + " and port: " + neighborPort);
                     e.printStackTrace();

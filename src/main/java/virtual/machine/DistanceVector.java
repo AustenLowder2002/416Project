@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class DistanceVector {
 
-    private static final Map<String, Router> routers = new HashMap<>();
+    static final Map<String, Router> routers = new HashMap<>();
     private static final Map<String, String> subnets = new HashMap<>();
 
     public static void main(String[] args) {
@@ -154,12 +154,6 @@ public class DistanceVector {
 
         } while (updated);
     }
-
-
-
-
-
-
 
     public static void printRoutingTables() {
         for (Router router : routers.values()) {

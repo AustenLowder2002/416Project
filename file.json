@@ -2,13 +2,13 @@
   "routers": [
     {
       "name": "r1",
-      "ip": "192.168.0.6",
-      "port": 6000,
+      "ip": "localhost",
+      "port": 6002,
       "links": ["r2"]
     },
     {
       "name": "r2",
-      "ip": "192.168.0.7",
+      "ip": "localhost",
       "port": 6001,
       "links": ["r1"]
     }
