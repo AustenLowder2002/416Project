@@ -35,7 +35,6 @@ public class Switch {
         }
     }
 
-
     public synchronized void addNeighbor(String neighborName, Socket socket) {
         neighbors.put(neighborName, socket);
     }
@@ -48,6 +47,27 @@ public class Switch {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public synchronized void forwardFrameToSwitch2(String frame, String sourceMAC, String destinationMAC) {
+        try {
+            Socket switch2Socket = new Socket("localhost", 3001); // Assuming Switch 2 is running on localhost:3001
+            PrintWriter out = new PrintWriter(switch2Socket.getOutputStream(), true);
+            out.println(frame + "|" + sourceMAC + "|" + destinationMAC);
+            switch2Socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public synchronized void handleFrameFromPC(String frame, String sourceMAC, String destinationMAC) {
+        // Forward the frame to Switch 2 if the destination MAC is in subnet 9
+        if (destinationMAC.equals("subnet9_MAC")) {
+            forwardFrameToSwitch2(frame, sourceMAC, destinationMAC);
+        } else {
+            // Broadcast the frame to other neighbors or forward it to the appropriate subnet
+            // Existing code...
         }
     }
 

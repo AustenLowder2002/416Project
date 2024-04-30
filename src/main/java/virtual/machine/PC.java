@@ -18,6 +18,7 @@ public class PC {
     private final String ip;
     private final String mac;
     private final String port;
+
     public PC(String name, String ip, String port) {
         this.name = name;
         this.ip = ip;
@@ -70,10 +71,6 @@ public class PC {
         }
     }
 
-
-    // needs flood frame first time sending across switch
-    //s1 needs to connect to s2
-    // c needs send to s2, s2 to s1, s1 to a/b
     public static void main(String[] args) throws UnknownHostException {
         if (args.length != 3) {
             System.out.println("Syntax: PC <ServerIP> <ServerPort> <PCName>");
@@ -111,7 +108,6 @@ public class PC {
         currentPC.start(sIp, serverPort);
     }
 
-
     private String generateMacAddress() {
         String namePart = name.substring(0, Math.min(name.length(), 6));
         String ipPart = ipToMacFormat(ip);
@@ -132,5 +128,4 @@ public class PC {
 
         return macBuilder.toString();
     }
-
 }

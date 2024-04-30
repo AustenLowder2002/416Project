@@ -7,9 +7,11 @@ import com.google.gson.JsonParser;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -63,9 +65,6 @@ public class Router {
             byte[] sendData = data.toString().getBytes();
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, neighborAddress, neighborPort);
             socket.send(sendPacket);
-
-            // Debug: Print sent distance vector
-            System.out.println("Sent Distance Vector to " + neighborName + ":");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -78,34 +77,50 @@ public class Router {
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                 socket.receive(receivePacket);
                 String receivedData = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                JsonObject receivedVector = new JsonParser().parse(receivedData).getAsJsonObject();
-                updateDistanceVector(receivedVector);
+                // Check if the received data is a distance vector or a frame
+                if (receivedData.contains("|")) {
+                    // Parse the frame data
+                    String[] frameParts = receivedData.split("\\|");
+                    String frame = frameParts[0];
+                    String sourceMAC = frameParts[1];
+                    String destinationMAC = frameParts[2];
+                    String path = frameParts[3];
+                    // Handle the frame based on its source
+                    if (path.startsWith("pc")) {
+                        // Frame received from a PC
+                        handleFrameFromPC(frame, sourceMAC, destinationMAC, path);
+                    } else if (path.startsWith("switch")) {
+                        // Frame received from a switch
+                        handleFrameFromSwitch(frame, sourceMAC, destinationMAC, path);
+                    } else {
+                        // Unknown source, ignore the frame
+                        System.err.println("Received frame with unknown source: " + path);
+                    }
+                } else {
+                    // Parse the received distance vector and update routing table
+                    JsonObject receivedVector = new JsonParser().parse(receivedData).getAsJsonObject();
+                    updateDistanceVector(receivedVector);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+
     private void updateDistanceVector(JsonObject receivedVector) {
         for (Map.Entry<String, JsonElement> subnetEntry : receivedVector.entrySet()) {
             String subnet = cleanString(subnetEntry.getKey());
             JsonObject neighborInfo = subnetEntry.getValue().getAsJsonObject();
             if (neighborInfo.isJsonObject()) {
-                System.out.println("Updated distance vector for subnet: " + subnet);
                 for (Map.Entry<String, JsonElement> neighborEntry : neighborInfo.entrySet()) {
                     String neighbor = cleanString(neighborEntry.getKey());
                     int cost = neighborEntry.getValue().getAsInt();
-                    System.out.println("Cost: " + cost);
                     if (distanceVector.containsKey(subnet) && distanceVector.get(subnet).containsKey(neighbor)) {
-                        System.out.println("NeighborInfo is a JSON object.");
-                        System.out.println("Updating distance for subnet: " + subnet + ", neighbor: " + neighbor);
                         int currentCost = distanceVector.get(subnet).get(neighbor);
                         distanceVector.get(subnet).put(neighbor, Math.min(currentCost, cost + 1));
-                        System.out.println("Next hop: " + neighbor + ", Distance: " + (cost + 1));
                     }
                 }
-            } else {
-                System.err.println("Invalid neighbor information for subnet: " + subnet);
             }
         }
     }
@@ -127,6 +142,49 @@ public class Router {
             }
         }
         return neighborInfo;
+    }
+
+    public synchronized void forwardFrame(String frame, String sourceMAC, String destinationMAC, String path) {
+        // Extract the next hop from the path
+        String[] pathNodes = path.split(" -> ");
+        String nextHop = null;
+        for (int i = 0; i < pathNodes.length; i++) {
+            if (pathNodes[i].equals(name)) {
+                if (i < pathNodes.length - 1) {
+                    nextHop = pathNodes[i + 1];
+                    break;
+                }
+            }
+        }
+
+        if (nextHop != null) {
+            // Find the socket corresponding to the next hop router
+            JsonObject nextHopInfo = getNeighborInfo(nextHop);
+            if (nextHopInfo != null) {
+                String nextHopIp = nextHopInfo.get("ip").getAsString();
+                int nextHopPort = nextHopInfo.get("port").getAsInt();
+                try (Socket nextHopSocket = new Socket(nextHopIp, nextHopPort)) {
+                    PrintWriter out = new PrintWriter(nextHopSocket.getOutputStream(), true);
+                    // Append the path to the frame
+                    String frameWithPath = frame + "|" + sourceMAC + "|" + destinationMAC + "|" + path;
+                    out.println(frameWithPath);
+                    // Log the path in the terminal
+                    System.out.println("Frame forwarded to " + nextHop + " with path: " + path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("Next hop information not found.");
+            }
+        } else {
+            System.out.println("Next hop not found.");
+        }
+    }
+
+
+    public synchronized void handleFrameFromPC(String frame, String sourceMAC, String destinationMAC, String path) {
+        // Forward the frame to the next hop router
+        forwardFrame(frame, sourceMAC, destinationMAC, path);
     }
 
     public static void main(String[] args) {
@@ -159,23 +217,12 @@ public class Router {
                 links,
                 subnets);
 
-        // Debug: Print initial routing table
-        System.out.println("Initial Routing Table:");
-        for (Map.Entry<String, Map<String, Integer>> entry : router.distanceVector.entrySet()) {
-            System.out.println("Subnet: " + cleanString(entry.getKey()));
-            Map<String, Integer> neighborDistances = entry.getValue();
-            for (Map.Entry<String, Integer> neighborEntry : neighborDistances.entrySet()) {
-                System.out.println("- Neighbor: " + cleanString(neighborEntry.getKey()) + ", Distance: " + neighborEntry.getValue());
-            }
-        }
-
         // Start threads for sending and receiving distance vectors
         Thread receiveThread = new Thread(router::receiveDistanceVector);
         receiveThread.start();
         for (String neighborName : router.links) {
             // Remove brackets and quotes from neighborName
             neighborName = cleanString(neighborName);
-            System.out.println("Neighbor name: " + neighborName); // Debugging print
             router.sendDistanceVector(neighborName);
         }
         while (true) {
@@ -188,6 +235,11 @@ public class Router {
                 e.printStackTrace();
             }
         }
+    }
+
+    public synchronized void handleFrameFromSwitch(String frame, String sourceMAC, String destinationMAC, String path) {
+        // Forward the frame to the next hop router or PC
+        forwardFrame(frame, sourceMAC, destinationMAC, path);
     }
 
     public static JsonObject readConfigFile(String filename) {
