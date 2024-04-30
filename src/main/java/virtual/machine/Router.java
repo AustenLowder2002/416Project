@@ -3,293 +3,207 @@ package virtual.machine;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonParser;
 
+import java.io.FileReader;
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static virtual.machine.JsonObject.readConfigFile;
-
 public class Router {
-    private final String name;
-    private final int port;
-    private final String routerIp;
+    private String name;
+    private String ip;
+    private int port;
+    private String[] links;
+    private String[] subnets;
+    private Map<String, Map<String, Integer>> distanceVector;
 
-    public Router(String name, int port, String routerIp) {
+    public Router(String name, String ip, int port, String[] links, String[] subnets) {
         this.name = name;
+        this.ip = ip;
         this.port = port;
-        this.routerIp = routerIp;
+        this.links = links;
+        this.subnets = subnets != null ? subnets : new String[0];  // Ensure subnets are not null
+        this.distanceVector = new HashMap<>();
+        for (String subnet : this.subnets) {
+            Map<String, Integer> entry = new HashMap<>();
+            // Initialize the distance to itself as 0
+            entry.put(name, 0);
+            // Initialize the distance to connected subnets as 0
+            for (String linkedRouter : links) {
+                entry.put(linkedRouter, 0);
+            }
+            distanceVector.put(subnet, entry);
+        }
     }
 
-    public static void main(String[] args) throws IOException {
-        if (args.length != 1) {
-            System.out.println("Syntax: Router <RouterName>");
+    public void sendDistanceVector(String neighborName) {
+        JsonObject neighborInfo = getNeighborInfo(neighborName);
+        if (neighborInfo == null) {
+            System.err.println("Neighbor information not found for: " + neighborName);
             return;
         }
-        String routerName = args[0];
+        String neighborIp = neighborInfo.get("ip").getAsString();
+        int neighborPort = neighborInfo.get("port").getAsInt();
 
-        // Read the configuration file
-        JsonObject config = readConfigFile("Router.json");
-
-        // Find router configuration based on provided router name
-        JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
-        String routerIp = null;
-        int routerPort = 0;
-        for (int i = 0; i < routersArray.size(); i++) {
-            JsonObject routerObject = routersArray.get(i).getAsJsonObject();
-            String name = routerObject.get("name").getAsString();
-            routerIp = routerObject.get("ip").getAsString();
-            if (name.equals(routerName)) {
-                routerPort = routerObject.get("port").getAsInt();
-                break;
-            }
-        }
-
-        if (routerPort == 0) {
-            System.out.println("Router with name '" + routerName + "' not found in the configuration.");
-            return;
-        }
-
-        Router currentRouter = new Router(routerName, routerPort, routerIp);
-        currentRouter.start();
-    }
-
-
-
-
-    private String generateInitialDistanceVectorTable(com.google.gson.JsonObject config) {
-        // Create a StringBuilder to construct the table
-        StringBuilder tableBuilder = new StringBuilder();
-
-        // Append header row
-        tableBuilder.append(String.format("%-10s %-10s %-10s%n", "Subnet", "Next Hop", "Distance"));
-
-        // Retrieve the router configuration by name
-        com.google.gson.JsonArray routersArray = config.getAsJsonArray("routers");
-        com.google.gson.JsonObject routerConfig = null;
-        for (com.google.gson.JsonElement routerElement : routersArray) {
-            com.google.gson.JsonObject routerObject = routerElement.getAsJsonObject();
-            if (routerObject.get("name").getAsString().equals(name)) {
-                routerConfig = routerObject;
-                break;
-            }
-        }
-
-        // If the router configuration is found, retrieve its subnets and next hops
-        if (routerConfig != null) {
-            // Retrieve the subnets and next hops as JsonArrays
-            JsonArray subnetsArray = routerConfig.getAsJsonArray("subnets");
-            JsonArray nextHopsArray = routerConfig.getAsJsonArray("links");
-
-            // Check if both arrays are non-null and have the same length
-            if (subnetsArray != null && nextHopsArray != null && subnetsArray.size() == nextHopsArray.size()) {
-                // Populate the table with subnet, next hop, and distance
-                for (int i = 0; i < subnetsArray.size(); i++) {
-                    String subnet = subnetsArray.get(i).getAsString();
-                    String nextHop = nextHopsArray.get(i).getAsString();
-                    tableBuilder.append(String.format("%-10s %-10s %-10s%n", subnet, nextHop, 0)); // Initialize distance to zero
+        try (DatagramSocket socket = new DatagramSocket()) {
+            InetAddress neighborAddress = InetAddress.getByName(neighborIp);
+            JsonObject data = new JsonObject();
+            for (Map.Entry<String, Map<String, Integer>> subnetEntry : distanceVector.entrySet()) {
+                JsonObject entryObject = new JsonObject();
+                for (Map.Entry<String, Integer> neighborEntry : subnetEntry.getValue().entrySet()) {
+                    entryObject.addProperty(cleanString(neighborEntry.getKey()), neighborEntry.getValue());
                 }
-            } else {
-                System.out.println("Subnets array or next hops array is null or has different lengths.");
+                data.add(cleanString(subnetEntry.getKey()), entryObject);
             }
-        } else {
-            System.out.println("Router configuration not found.");
-        }
+            byte[] sendData = data.toString().getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, neighborAddress, neighborPort);
+            socket.send(sendPacket);
 
-        return tableBuilder.toString();
-    }
-
-
-
-
-    public synchronized void connectToOtherRouters() {
-        JsonObject config = readConfigFile("Router.json");
-        JsonArray routersArray = Objects.requireNonNull(config).getAsJsonArray("routers");
-
-        try {
-            // Create a UDP socket for sending and receiving data
-            DatagramSocket socket = new DatagramSocket(port);
-
-            // Generate the initial distance vector table as a string
-            String initialDistanceVectorTable = generateInitialDistanceVectorTable(config);
-
-            // Convert the table string to bytes
-            byte[] sendData = initialDistanceVectorTable.getBytes();
-
-            // Store the initial distance vector table received from neighbors
-            Map<String, String> receivedTables = new HashMap<>();
-
-            // Iterate through each router configuration
-            for (int i = 0; i < routersArray.size(); i++) {
-                JsonObject routerObject = routersArray.get(i).getAsJsonObject();
-                String neighborName = routerObject.get("name").getAsString();
-                int neighborPort = routerObject.get("port").getAsInt();
-                JsonArray linksArray = routerObject.getAsJsonArray("links");
-
-                // If the router is a neighbor and not itself, send the initial distance vector table
-                if (!neighborName.equals(name) && linksArray.contains(new JsonPrimitive(name))) {
-                    System.out.println("Connecting to router: " + neighborName + " at port: " + neighborPort);
-
-                    // Create a UDP packet with the table data
-                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getLocalHost(), neighborPort);
-
-                    // Send the UDP packet
-                    socket.send(sendPacket);
-
-                    System.out.println("Sent initial distance vector table to router: " + neighborName);
-                }
-            }
-
-            // Continuously receive packets
-            while (true) {
-                // Prepare to receive data
-                byte[] receiveData = new byte[1024];
-                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-
-                // Receive UDP packet
-                socket.receive(receivePacket);
-
-                // Process received data
-                String receivedData = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                String neighborName = getNeighborName(receivePacket.getPort(), config);
-                System.out.println("Received data from router " + neighborName + ": " + receivedData);
-
-                // Split the received data into rows using newline character as the delimiter
-                String[] rows = receivedData.split("\n");
-
-                // Initialize a map to store subnet distances for the current neighbor router
-                Map<String, Integer> distances = new HashMap<>();
-
-                for (String row : rows) {
-                    // Split the row into columns using tab character as the delimiter
-                    String[] columns = row.trim().split("\\s+");
-
-                    // Check if the row contains the expected number of columns
-                    if (columns.length >= 3) {
-                        // Extract subnet, next hop, and distance from the columns
-                        String subnet = columns[0].trim();
-                        String nextHop = columns[1].trim();
-                        // Combine remaining columns as the distance value
-                        StringBuilder distanceBuilder = new StringBuilder();
-                        for (int j = 2; j < columns.length; j++) {
-                            distanceBuilder.append(columns[j].trim());
-                            if (j < columns.length - 1) {
-                                distanceBuilder.append(" "); // Add space delimiter between values
-                            }
-                        }
-                        System.out.println("Subnet: " + subnet + ", Next Hop: " + nextHop + ", Distance: " + distanceBuilder.toString());
-                        try {
-                            int distance = Integer.parseInt(distanceBuilder.toString());
-                            // Store the subnet and distance in the distances map
-                            distances.put(subnet, distance);
-                        } catch (NumberFormatException e) {
-                            // Log an error for invalid distance format
-                            System.out.println("Invalid distance format: " + distanceBuilder.toString());
-                        }
-                    } else {
-                        // Log an error for rows with invalid format
-                        System.out.println("Invalid format in received table row: " + row);
-                    }
-                }
-
-
-
-                // Store the calculated distances for the current neighbor router
-                receivedTables.put(neighborName, receivedData);
-
-                // If received tables from all neighbors, calculate distances to other subnets
-                if (receivedTables.size() == routersArray.size() - 1) {
-                    // Process received tables to calculate distances to other subnets
-                    Map<String, Map<String, Integer>> subnetDistances = calculateSubnetDistances(receivedTables);
-
-                    // Display the complete table
-                    displayCompleteTable(subnetDistances);
-                }
-            }
+            // Debug: Print sent distance vector
+            System.out.println("Sent Distance Vector to " + neighborName + ":");
         } catch (IOException e) {
-            System.out.println("Failed to connect to routers.");
             e.printStackTrace();
         }
     }
 
+    public void receiveDistanceVector() {
+        try (DatagramSocket socket = new DatagramSocket(port)) {
+            byte[] receiveData = new byte[1024];
+            while (true) {
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                socket.receive(receivePacket);
+                String receivedData = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                JsonObject receivedVector = new JsonParser().parse(receivedData).getAsJsonObject();
+                updateDistanceVector(receivedVector);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-
-    // Method to calculate distances to other subnets
-    private Map<String, Map<String, Integer>> calculateSubnetDistances(Map<String, String> receivedTables) {
-        // Initialize the map to store subnet distances for each neighbor router
-        Map<String, Map<String, Integer>> subnetDistances = new HashMap<>();
-
-        // Iterate through each neighbor's table
-        for (Map.Entry<String, String> entry : receivedTables.entrySet()) {
-            String neighborName = entry.getKey();
-            String table = entry.getValue();
-
-            // Parse the table to extract subnet distances
-            Map<String, Integer> distances = new HashMap<>();
-            String[] rows = table.split("\n"); // Split rows by newline character
-            for (String row : rows) {
-                String[] columns = row.split("\\s+"); // Split each row using one or more spaces or tabs
-                // Ensure the row contains the expected number of columns
-                if (columns.length == 3) {
-                    String subnet = columns[0].trim();
-                    // Skip the next hop column (columns[1])
-                    int distance = Integer.parseInt(columns[2].trim()); // The distance is at index 2
-                    distances.put(subnet, distance);
-                } else {
-                    // Handle invalid row format
-                    System.out.println("Invalid format in received table row: " + row);
+    private void updateDistanceVector(JsonObject receivedVector) {
+        for (Map.Entry<String, JsonElement> subnetEntry : receivedVector.entrySet()) {
+            String subnet = cleanString(subnetEntry.getKey());
+            JsonObject neighborInfo = subnetEntry.getValue().getAsJsonObject();
+            if (neighborInfo.isJsonObject()) {
+                System.out.println("Updated distance vector for subnet: " + subnet);
+                for (Map.Entry<String, JsonElement> neighborEntry : neighborInfo.entrySet()) {
+                    String neighbor = cleanString(neighborEntry.getKey());
+                    int cost = neighborEntry.getValue().getAsInt();
+                    System.out.println("Cost: " + cost);
+                    if (distanceVector.containsKey(subnet) && distanceVector.get(subnet).containsKey(neighbor)) {
+                        System.out.println("NeighborInfo is a JSON object.");
+                        System.out.println("Updating distance for subnet: " + subnet + ", neighbor: " + neighbor);
+                        int currentCost = distanceVector.get(subnet).get(neighbor);
+                        distanceVector.get(subnet).put(neighbor, Math.min(currentCost, cost + 1));
+                        System.out.println("Next hop: " + neighbor + ", Distance: " + (cost + 1));
+                    }
                 }
-            }
-
-            // Store the calculated distances for the current neighbor router
-            subnetDistances.put(neighborName, distances);
-        }
-
-        return subnetDistances;
-    }
-
-
-
-    // Method to display the complete table
-    private void displayCompleteTable(Map<String, Map<String, Integer>> subnetDistances) {
-        // Print header
-        System.out.println("Complete Distance Vector Table:");
-        System.out.printf("%-10s %-10s %-10s%n", "Router", "Subnet", "Distance");
-
-        // Iterate through each neighbor router
-        for (Map.Entry<String, Map<String, Integer>> entry : subnetDistances.entrySet()) {
-            String neighborName = entry.getKey();
-            Map<String, Integer> distances = entry.getValue();
-
-            // Print subnet distances for the current neighbor router
-            for (Map.Entry<String, Integer> distanceEntry : distances.entrySet()) {
-                String subnet = distanceEntry.getKey();
-                int distance = distanceEntry.getValue();
-                System.out.printf("%-10s %-10s %-10s%n", neighborName, subnet, distance);
+            } else {
+                System.err.println("Invalid neighbor information for subnet: " + subnet);
             }
         }
     }
 
+    private static String cleanString(String str) {
+        return str.replaceAll("[\"\\[\\]]", "");
+    }
 
-    // Helper method to get neighbor name based on port number
-    private String getNeighborName(int port, JsonObject config) {
-        JsonArray routersArray = config.getAsJsonArray("routers");
-        for (JsonElement element : routersArray) {
-            JsonObject routerObject = element.getAsJsonObject();
-            if (routerObject.get("port").getAsInt() == port) {
-                return routerObject.get("name").getAsString();
+    private JsonObject getNeighborInfo(String neighborName) {
+        JsonObject config = readConfigFile("file.json");
+        JsonObject neighborInfo = null;
+        neighborName = cleanString(neighborName);
+        for (int i = 0; i < Objects.requireNonNull(config).getAsJsonArray("routers").size(); i++) {
+            JsonObject router = config.getAsJsonArray("routers").get(i).getAsJsonObject();
+            String routerName = cleanString(router.get("name").getAsString());
+            if (routerName.equals(neighborName)) {
+                neighborInfo = router;
+                break;
             }
         }
-        return null;
+        return neighborInfo;
     }
 
+    public static void main(String[] args) {
+        if (args.length == 0) {
+            System.out.println("Please specify the router name as a command line argument.");
+            return;
+        }
+        String routerName = args[0];
+        JsonObject config = readConfigFile("file.json");
+        JsonObject routerConfig = null;
+        for (JsonElement element : Objects.requireNonNull(config.getAsJsonArray("routers"))) {
+            JsonObject router = element.getAsJsonObject();
+            if (router.get("name").getAsString().equals(routerName)) {
+                routerConfig = router;
+                break;
+            }
+        }
+        if (routerConfig == null) {
+            System.out.println("Router not found in the config.");
+            return;
+        }
 
-    public void start() {
-        connectToOtherRouters();
+        String[] links = getStringArray(String.valueOf(routerConfig.get("links")));
+        String[] subnets = getStringArray(String.valueOf(routerConfig.get("subnets")));
 
+        // Create an instance of the Router class with the retrieved links and subnets arrays
+        Router router = new Router(cleanString(routerConfig.get("name").getAsString()),
+                cleanString(routerConfig.get("ip").getAsString()),
+                routerConfig.get("port").getAsInt(),
+                links,
+                subnets);
+
+        // Debug: Print initial routing table
+        System.out.println("Initial Routing Table:");
+        for (Map.Entry<String, Map<String, Integer>> entry : router.distanceVector.entrySet()) {
+            System.out.println("Subnet: " + cleanString(entry.getKey()));
+            Map<String, Integer> neighborDistances = entry.getValue();
+            for (Map.Entry<String, Integer> neighborEntry : neighborDistances.entrySet()) {
+                System.out.println("- Neighbor: " + cleanString(neighborEntry.getKey()) + ", Distance: " + neighborEntry.getValue());
+            }
+        }
+
+        // Start threads for sending and receiving distance vectors
+        Thread receiveThread = new Thread(router::receiveDistanceVector);
+        receiveThread.start();
+        for (String neighborName : router.links) {
+            // Remove brackets and quotes from neighborName
+            neighborName = cleanString(neighborName);
+            System.out.println("Neighbor name: " + neighborName); // Debugging print
+            router.sendDistanceVector(neighborName);
+        }
+        while (true) {
+            try {
+                Thread.sleep(5000);
+                for (String neighborName : router.links) {
+                    router.sendDistanceVector(neighborName);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
+    public static JsonObject readConfigFile(String filename) {
+        try (FileReader reader = new FileReader(filename)) {
+            JsonParser parser = new JsonParser();
+            return parser.parse(reader).getAsJsonObject();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
+
+    private static String[] getStringArray(String str) {
+        if (str == null) {
+            return new String[0];
+        }
+        return str.split(",");
+    }
+}

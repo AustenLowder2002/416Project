@@ -3,23 +3,44 @@
     {
       "name": "r1",
       "ip": "localhost",
-      "port": 6002,
-      "links": ["r2"],
-      "subnet1": ["subnet1", "subnet3"]
+      "port": 6000,
+      "links": ["r2", "r3"],
+      "subnets": ["subnet1", "subnet2", "subnet3"]
     },
     {
       "name": "r2",
       "ip": "localhost",
       "port": 6001,
-      "links": ["r3", "r1"],
-      "subnet": ["subnet1", "subnet2"]
+      "links": ["r3", "r1", "r5"],
+      "subnets": ["subnet4", "subnet3", "subnet5"]
     },
     {
       "name": "r3",
       "ip": "localhost",
+      "port": 6002,
+      "links": ["r2", "r1", "r4"],
+      "subnets": ["subnet2", "subnet4", "subnet6"]
+    },
+    {
+      "name": "r4",
+      "ip": "localhost",
       "port": 6003,
-      "links": ["r2"],
-      "subnet": ["subnet2", "subnet4"]
+      "links": ["r2","r3","r6"],
+      "subnets": ["subnet6", "subnet7", "subnet8"]
+    },
+    {
+      "name": "r5",
+      "ip": "localhost",
+      "port": 6004,
+      "links": ["r2", "r4","r6"],
+      "subnets": ["subnet7", "subnet4", "subnet9"]
+    },
+    {
+      "name": "r6",
+      "ip": "localhost",
+      "port": 6005,
+      "links": ["r4", "r5"],
+      "subnets": ["subnet9", "subnet8"]
     }
   ],
   "switches": [
@@ -27,12 +48,14 @@
       "name": "s1",
       "ip": "localhost",
       "port": 3000,
-      "links": [],
+      "links": ["r1"],
       "subnet": "subnet1"
     },
     {
       "name": "s2",
       "ip": "localhost",
+      "subnets": ["subnet9"],
+      "links": ["r6"],
       "port": 3001
     }
   ],
@@ -40,49 +63,26 @@
     {
       "name": "A",
       "ip": "192.168.1.2",
-      "port": 5000
+      "port": 5000,
+      "links": ["s1", "B"]
     },
     {
       "name": "B",
       "ip": "192.168.1.4",
-      "port": 5001
+      "port": 5001,
+      "links": ["s1","A"]
     },
     {
       "name": "C",
       "ip": "192.168.1.5",
-      "port": 5002
+      "port": 5002,
+      "links": ["s2","D"]
     },
     {
       "name": "D",
       "ip": "192.168.1.3",
-      "port": 5003
+      "port": 5003,
+      "links": ["s2","C"]
     }
-  ],
-  "links": [
-    {
-      "node1": "s1",
-      "node2": "A"
-    },
-    {
-      "node1": "s1",
-      "node2": "B"
-    },
-    {
-      "node1": "s1",
-      "node2": "s2"
-    },
-    {
-      "node1": "s2",
-      "node2": "C"
-    },
-    {
-      "node1": "s2",
-      "node2": "D"
-    }
-  ],
-  "subnets": {
-    "net1": "subnet1",
-    "net2": "subnet2",
-    "net3": "subnet3"
-  }
+  ]
 }
