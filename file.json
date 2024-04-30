@@ -40,7 +40,7 @@
       "ip": "localhost",
       "port": 6005,
       "links": ["r4", "r5"],
-      "subnets": ["subnet9", "subnet8"]
+      "subnets": ["subnet10","subnet9", "subnet8"]
     }
   ],
   "switches": [
@@ -54,7 +54,7 @@
     {
       "name": "s2",
       "ip": "localhost",
-      "subnets": "subnet9",
+      "subnets": "subnet10",
       "links": ["r6"],
       "port": 3001
     }

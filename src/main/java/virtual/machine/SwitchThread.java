@@ -33,7 +33,7 @@ class SwitchThread extends Thread {
                     String destinationMAC = frameData[2];
 
                     // Forward the frame to Switch 2 if the destination MAC is in subnet 9
-                    parentSwitch.handleFrameFromPC(frame, sourceMAC, destinationMAC);
+                    parentSwitch.broadcastFrame(frame, sourceMAC, destinationMAC);
                     System.out.println("Forwarding frame: " + frame);
                 }
             }

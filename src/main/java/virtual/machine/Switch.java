@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import static virtual.machine.JsonObject.readConfigFile;
 
@@ -43,7 +44,8 @@ public class Switch {
         for (Socket neighborSocket : neighbors.values()) {
             try {
                 PrintWriter out = new PrintWriter(neighborSocket.getOutputStream(), true);
-                out.println(frame + "|" + sourceMAC + "|" + destinationMAC);
+                out.println(frame + "|" + sourceMAC + "|" + destinationMAC + "|");
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
